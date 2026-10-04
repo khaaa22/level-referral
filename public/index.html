@@ -1,21 +1,240 @@
 <!doctype html>
-<html lang="ar" dir="rtl"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-<title>مستوياتي</title><style>
-*{box-sizing:border-box}body{margin:0;background:#f5f7fa;color:#16384b;font-family:Arial,sans-serif}header{background:#063b55;color:#fff;text-align:center;padding:32px 15px}header h1{margin:0;font-size:32px}header p{font-size:18px}.wrap{max-width:570px;margin:28px auto;padding:0 15px}.card{background:#fff;border-radius:20px;padding:26px;box-shadow:0 8px 30px #0001}input{width:100%;padding:15px;margin:7px 0 14px;border:1px solid #ddd;border-radius:11px;font-size:16px}button{border:0;border-radius:11px;padding:14px 20px;background:#063b55;color:#fff;font-size:16px;cursor:pointer}.tabs{display:flex;gap:10px;margin-bottom:22px}.tabs button{flex:1}.gold{background:#c98945}.hidden{display:none}.error{color:#b42318}.ok{color:#14804a;font-weight:bold}.stats{display:grid;grid-template-columns:1fr 1fr;gap:12px}.stat{background:#f4f7f8;padding:18px;border-radius:13px;text-align:center}.big{font-size:30px;font-weight:bold}.progress{height:18px;background:#e7ecef;border-radius:20px;overflow:hidden}.bar{height:100%;background:#c98945;width:0;transition:.3s}.link{padding:14px;background:#f5f5f5;border-radius:10px;word-break:break-all;margin:10px 0}.small{font-size:13px;color:#687780}</style></head>
-<body><header><h1>مستوياتي</h1><p>3 إحالات للانتقال إلى المستوى التالي</p></header><div class="wrap">
-<section class="card" id="auth"><div class="tabs"><button onclick="tab('login')">تسجيل الدخول</button><button class="gold" onclick="tab('register')">إنشاء حساب</button></div>
-<div id="login"><h2>تسجيل الدخول</h2><input id="le" type="email" placeholder="البريد الإلكتروني"><input id="lp" type="password" placeholder="كلمة السر"><button onclick="login()">دخول</button><p id="lm"></p></div>
-<div id="register" class="hidden"><h2>إنشاء حساب جديد</h2><input id="rn" placeholder="الاسم"><input id="re" type="email" placeholder="البريد الإلكتروني"><input id="rp" type="password" placeholder="كلمة السر — 6 أحرف على الأقل"><button onclick="register()">إنشاء الحساب</button><p id="rm"></p></div></section>
-<section class="card hidden" id="dash"><div style="display:flex;justify-content:space-between;align-items:center"><h2>لوحة التحكم</h2><button onclick="logout()">خروج</button></div><p>مرحبًا، <b id="un"></b></p>
-<div class="stats"><div class="stat"><div class="small">المستوى</div><div class="big" id="ul">1</div></div><div class="stat"><div class="small">الإحالات</div><div class="big" id="ur">0/3</div></div></div>
-<h3>التقدم</h3><div class="progress"><div class="bar" id="bar"></div></div><p id="st"></p><h3>رابط الإحالة</h3><div class="link" id="rl"></div><button onclick="copyLink()">نسخ الرابط</button></section></div>
-<script>
-const $=x=>document.getElementById(x);
-function tab(x){$("login").classList.toggle("hidden",x!=="login");$("register").classList.toggle("hidden",x!=="register")}
-async function api(url,o={}){o.headers={"Content-Type":"application/json",...(o.headers||{})};if(localStorage.token)o.headers.Authorization="Bearer "+localStorage.token;const r=await fetch(url,o);const d=await r.json();if(!r.ok)throw Error(d.error||"حدث خطأ");return d}
-async function register(){try{const ref=new URLSearchParams(location.search).get("ref");const d=await api("/api/register",{method:"POST",body:JSON.stringify({name:$("rn").value,email:$("re").value,password:$("rp").value,ref})});localStorage.token=d.token;render(d.user)}catch(e){$("rm").textContent=e.message;$("rm").className="error"}}
-async function login(){try{const d=await api("/api/login",{method:"POST",body:JSON.stringify({email:$("le").value,password:$("lp").value})});localStorage.token=d.token;render(d.user)}catch(e){$("lm").textContent=e.message;$("lm").className="error"}}
-async function load(){if(!localStorage.token)return;try{render((await api("/api/me")).user)}catch(e){localStorage.removeItem("token")}}
-function render(u){$("auth").classList.add("hidden");$("dash").classList.remove("hidden");$("un").textContent=u.name;$("ul").textContent=u.level;$("ur").textContent=u.referrals+"/3";$("bar").style.width=(u.referrals/3*100)+"%";$("st").innerHTML=u.referrals?u.referrals<3?"باقي "+(3-u.referrals)+" إحالة للانتقال للمستوى التالي.":"<span class=ok>🎉 انتقلتِ إلى المستوى التالي!</span>":"ابدئي بدعوة 3 أشخاص.";$("rl").textContent=location.origin+location.pathname+"?ref="+u.referral_code}
-function logout(){localStorage.removeItem("token");location.reload()}function copyLink(){navigator.clipboard.writeText($("rl").textContent);alert("تم نسخ الرابط")}load();
-</script></body></html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>لوحة مستوياتي</title>
+  <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;900&display=swap" rel="stylesheet">
+  <style>
+    * { box-sizing: border-box; font-family: 'Cairo', sans-serif; }
+    body { margin: 0; background: #0b192c; color: #fff; min-height: 100vh; display: flex; flex-direction: column; align-items: center; padding-bottom: 30px; }
+    header { width: 100%; background: #1e3e62; padding: 18px 10px; text-align: center; box-shadow: 0 4px 10px rgba(0,0,0,0.3); }
+    header h1 { margin: 0; font-size: 22px; color: #ffb200; }
+    header p { margin: 5px 0 0; font-size: 13px; color: #d1d5db; }
+    .card { background: #1e3e62; border-radius: 16px; padding: 22px; width: 92%; max-width: 480px; margin-top: 20px; box-shadow: 0 8px 25px rgba(0,0,0,0.4); text-align: center; }
+    .tabs { display: flex; gap: 8px; margin-bottom: 20px; }
+    .tab { flex: 1; padding: 10px; border: none; border-radius: 8px; cursor: pointer; font-weight: 700; background: #0b192c; color: #fff; }
+    .tab.active { background: #ffb200; color: #000; }
+    input { width: 100%; padding: 12px; margin-bottom: 12px; border-radius: 8px; border: 1px solid #334155; background: #0b192c; color: #fff; text-align: right; }
+    button.btn { width: 100%; padding: 12px; border-radius: 8px; border: none; background: #ffb200; color: #000; font-weight: 900; font-size: 16px; cursor: pointer; }
+    .hidden { display: none !important; }
+    .error { color: #f87171; font-size: 13px; margin-top: 8px; }
+    .stats { display: flex; gap: 10px; margin-bottom: 16px; }
+    .stat { flex: 1; background: #0b192c; padding: 12px; border-radius: 12px; border: 1px solid #334155; }
+    .stat .val { font-size: 22px; font-weight: 900; color: #ffb200; }
+    .stat .lbl { font-size: 12px; color: #94a3b8; }
+    
+    .board-container { background: #081220; border-radius: 16px; padding: 20px 10px; margin: 18px 0; border: 2px solid #ffb200; }
+    .board-title { font-size: 16px; font-weight: 800; color: #ffb200; margin-bottom: 15px; }
+    
+    .board-level-legend { display: flex; flex-direction: column; align-items: center; justify-content: center; margin-bottom: 25px; }
+    .circle-legend { width: 85px; height: 85px; border-radius: 50%; background: linear-gradient(135deg, #ffb200, #ff5722); display: flex; flex-direction: column; align-items: center; justify-content: center; box-shadow: 0 0 20px rgba(255, 178, 0, 0.6); border: 3px solid #fff; font-size: 12px; font-weight: 900; color: #000; }
+    .circle-legend span { font-size: 10px; color: #fff; background: rgba(0,0,0,0.6); padding: 2px 6px; border-radius: 6px; margin-top: 2px; }
+
+    .board-grid { display: flex; justify-content: space-around; gap: 10px; flex-wrap: wrap; margin-top: 10px; }
+    .slot { display: flex; flex-direction: column; align-items: center; width: 30%; }
+    .slot-circle { width: 65px; height: 65px; border-radius: 50%; background: #1e3e62; border: 2px dashed #94a3b8; display: flex; flex-direction: column; align-items: center; justify-content: center; font-size: 11px; color: #94a3b8; }
+    .slot-circle.filled { background: linear-gradient(135deg, #00c853, #64dd17); border: 2px solid #fff; color: #000; font-weight: 800; box-shadow: 0 0 12px rgba(0, 200, 83, 0.5); }
+    .slot-label { font-size: 11px; margin-top: 6px; font-weight: 700; color: #e2e8f0; }
+    
+    .link-box { background: #0b192c; padding: 12px; border-radius: 10px; margin-top: 15px; word-break: break-all; font-size: 12px; border: 1px dashed #ffb200; color: #38bdf8; }
+    .logout-btn { background: #ef4444; color: #fff; padding: 6px 14px; border-radius: 8px; border: none; font-size: 12px; font-weight: 700; cursor: pointer; float: left; }
+  </style>
+</head>
+<body>
+
+  <header>
+    <h1>لوحة الإحالات والمستويات</h1>
+    <p>3 إحالات نشطة للانتقال المباشر إلى المستوى التالي</p>
+  </header>
+
+  <section class="card" id="auth">
+    <div class="tabs">
+      <button class="tab active" id="tab-login" onclick="tab('login')">تسجيل الدخول</button>
+      <button class="tab" id="tab-reg" onclick="tab('reg')">إنشاء حساب</button>
+    </div>
+
+    <div id="login-form">
+      <input type="email" id="login-email" placeholder="البريد الإلكتروني"/>
+      <input type="password" id="login-pass" placeholder="كلمة المرور"/>
+      <button class="btn" onclick="login()">دخول</button>
+    </div>
+
+    <div id="reg-form" class="hidden">
+      <input type="text" id="reg-name" placeholder="اسمك الكامل"/>
+      <input type="email" id="reg-email" placeholder="البريد الإلكتروني"/>
+      <input type="password" id="reg-pass" placeholder="كلمة المرور"/>
+      <button class="btn" onclick="register()">إنشاء الحساب</button>
+    </div>
+    <div class="error" id="auth-err"></div>
+  </section>
+
+  <section class="card hidden" id="dash">
+    <div style="overflow: hidden; margin-bottom: 12px;">
+      <button class="logout-btn" onclick="logout()">خروج</button>
+      <h2 style="margin: 0; font-size: 18px; text-align: right;" id="u-name">أهلاً بك</h2>
+    </div>
+
+    <div class="stats">
+      <div class="stat">
+        <div class="lbl">المستوى الحالي</div>
+        <div class="val" id="u-level">1</div>
+      </div>
+      <div class="stat">
+        <div class="lbl">المسجلين برابطك</div>
+        <div class="val" id="u-refs">0/3</div>
+      </div>
+    </div>
+
+    <div class="board-container">
+      <div class="board-title">لوحة أعضاء فريقك (BOARD)</div>
+      
+      <div class="board-level-legend">
+        <div class="circle-legend">
+          <div id="board-leader-name">أنت</div>
+          <span id="board-leader-lvl">القائد</span>
+        </div>
+      </div>
+
+      <div class="board-grid">
+        <div class="slot">
+          <div class="slot-circle" id="slot-1">فارغ</div>
+          <div class="slot-label" id="slot-1-name">إحالة 1</div>
+        </div>
+        <div class="slot">
+          <div class="slot-circle" id="slot-2">فارغ</div>
+          <div class="slot-label" id="slot-2-name">إحالة 2</div>
+        </div>
+        <div class="slot">
+          <div class="slot-circle" id="slot-3">فارغ</div>
+          <div class="slot-label" id="slot-3-name">إحالة 3</div>
+        </div>
+      </div>
+    </div>
+
+    <p style="font-size: 13px; color: #cbd5e1; margin-top: 15px;">رابط الإحالة المباشر الخاص بك:</p>
+    <div class="link-box" id="ref-link">...</div>
+    <button class="btn" style="margin-top: 10px;" onclick="copyLink()">نسخ الرابط ومشاركته</button>
+  </section>
+
+  <script>
+    const $ = id => document.getElementById(id);
+    const token = () => localStorage.getItem("token");
+
+    function tab(type) {
+      if (type === 'login') {
+        $('tab-login').classList.add('active');
+        $('tab-reg').classList.remove('active');
+        $('login-form').classList.remove('hidden');
+        $('reg-form').classList.add('hidden');
+      } else {
+        $('tab-reg').classList.add('active');
+        $('tab-login').classList.remove('active');
+        $('reg-form').classList.remove('hidden');
+        $('login-form').classList.add('hidden');
+      }
+      $('auth-err').innerText = '';
+    }
+
+    async function req(url, body) {
+      const res = await fetch(url, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          ...(token() ? { "Authorization": "Bearer " + token() } : {})
+        },
+        body: JSON.stringify(body)
+      });
+      return await res.json();
+    }
+
+    async function login() {
+      $('auth-err').innerText = '';
+      try {
+        const d = await req("/api/login", { email: $('login-email').value, password: $('login-pass').value });
+        if (d.token) {
+          localStorage.setItem("token", d.token);
+          load();
+        } else {
+          $('auth-err').innerText = d.message || "فشل تسجيل الدخول";
+        }
+      } catch(e) { $('auth-err').innerText = "حدث خطأ في الاتصال"; }
+    }
+
+    async function register() {
+      $('auth-err').innerText = '';
+      const params = new URLSearchParams(window.location.search);
+      const ref = params.get('ref');
+      try {
+        const d = await req("/api/register", {
+          name: $('reg-name').value,
+          email: $('reg-email').value,
+          password: $('reg-pass').value,
+          referrerCode: ref
+        });
+        if (d.token) {
+          localStorage.setItem("token", d.token);
+          load();
+        } else {
+          $('auth-err').innerText = d.message || "تعذر إنشاء الحساب";
+        }
+      } catch(e) { $('auth-err').innerText = "حدث خطأ في الاتصال"; }
+    }
+
+    async function load() {
+      if (!token()) return;
+      try {
+        const res = await fetch("/api/me", {
+          headers: { "Authorization": "Bearer " + token() }
+        });
+        const d = await res.json();
+        if (d.user) render(d.user, d.referrals || []);
+      } catch(e) {}
+    }
+
+    function render(u, referrals) {
+      $('auth').classList.add('hidden');
+      $('dash').classList.remove('hidden');
+      $('u-name').innerText = "مرحباً، " + u.name;
+      $('u-level').innerText = u.level;
+      $('board-leader-name').innerText = u.name;
+      $('board-leader-lvl').innerText = "مستوى " + u.level;
+
+      const count = referrals.length || u.referral_count || 0;
+      $('u-refs').innerText = count + "/3";
+
+      for (let i = 1; i <= 3; i++) {
+        const el = $('slot-' + i);
+        const nameEl = $('slot-' + i + '-name');
+        if (referrals && referrals[i - 1]) {
+          el.className = "slot-circle filled";
+          el.innerText = "✓ نشط";
+          nameEl.innerText = referrals[i - 1].name;
+          nameEl.style.color = "#4ade80";
+        } else {
+          el.className = "slot-circle";
+          el.innerText = "فارغ";
+          nameEl.innerText = "إحالة " + i;
+          nameEl.style.color = "#94a3b8";
+        }
+      }
+
+      const fullUrl = window.location.origin + "/?ref=" + u.referral_code;
+      $('ref-link').innerText = fullUrl;
+    }
+
+    function copyLink() {
+      const text = $('ref-link').innerText;
+      navigator.clipboard.writeText(text);
+      alert("تم نسخ رابط إحالتك بنجاح!");
+    }
+
+    function logout() {
+      localStorage.removeItem("token");
+      location.reload();
+    }
+
+    load();
+  </script>
+</body>
+</html>
