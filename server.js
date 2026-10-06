@@ -15,18 +15,18 @@ const pool = new Pool({
   ssl: { rejectUnauthorized: false }
 });
 
-const SECRET = process.env.JWT_SECRET || "fallback_secret_key_12345";
+const SECRET = process.env.JWT_SECRET || "super_secret_jwt_key_12345";
 
-// إعداد خدمة البريد
+// إعداد خدمة الإيميل
 const transporter = nodemailer.createTransport({
   service: "gmail",
   auth: {
     user: process.env.EMAIL_USER,
-    pass: process.env.EMAIL_PASS
+    pass: process.env.EMAIL_PASS ? process.env.EMAIL_PASS.replace(/\s+/g, '') : ""
   }
 });
 
-// إنشاء الجداول تلقائياً إن لم تكن موجودة
+// ترقية وضبط جداول قاعدة البيانات تلقائياً
 async function initDB() {
   try {
     await pool.query(`
@@ -36,17 +36,25 @@ async function initDB() {
         email VARCHAR(150) UNIQUE NOT NULL,
         password VARCHAR(255) NOT NULL,
         is_verified BOOLEAN DEFAULT FALSE,
-        otp_code VARCHAR(10),
-        otp_expires TIMESTAMP,
         referral_code VARCHAR(50) UNIQUE,
         referred_by VARCHAR(50),
         level INT DEFAULT 1,
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
       );
     `);
-    console.log("Database initialized successfully");
+
+    // إضافة الأعمدة إن كانت مفقودة لحل خطأ missing column نهائياً
+    await pool.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS is_verified BOOLEAN DEFAULT FALSE;`);
+    await pool.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS verification_otp VARCHAR(20);`);
+    await pool.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS otp_code VARCHAR(20);`);
+    await pool.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS otp_expires TIMESTAMP;`);
+    await pool.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS referral_code VARCHAR(50);`);
+    await pool.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS referred_by VARCHAR(50);`);
+    await pool.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS level INT DEFAULT 1;`);
+
+    console.log("Database initialized and columns synchronized successfully.");
   } catch (err) {
-    console.error("Database initialization error:", err);
+    console.error("Database Init Error:", err.message);
   }
 }
 initDB();
@@ -59,74 +67,87 @@ app.post("/api/register", async (req, res) => {
       return res.status(400).json({ error: "جميع الحقول مطلوبة" });
     }
 
-    const userCheck = await pool.query("SELECT * FROM users WHERE email = $1", [email.toLowerCase().trim()]);
+    const cleanEmail = email.toLowerCase().trim();
+    const userCheck = await pool.query("SELECT * FROM users WHERE email = $1", [cleanEmail]);
     if (userCheck.rows.length > 0) {
-      return res.status(400).json({ error: "البريد الإلكتروني مسجل مسبقاً" });
+      return res.status(400).json({ error: "البريد الإلكتروني مسجل مسبقاً، يمكنك تسجيل الدخول" });
     }
 
     const hashedPassword = await bcrypt.hash(password, 10);
     const otp = Math.floor(100000 + Math.random() * 900000).toString();
-    const otpExpires = new Date(Date.now() + 15 * 60 * 1000); // 15 دقيقة
+    const otpExpires = new Date(Date.now() + 20 * 60 * 1000); // 20 دقيقة
     const myReferralCode = "REF-" + crypto.randomBytes(3).toString("hex").toUpperCase();
 
     await pool.query(
-      `INSERT INTO users (name, email, password, otp_code, otp_expires, referral_code, referred_by, is_verified)
-       VALUES ($1, $2, $3, $4, $5, $6, $7, false)`,
-      [name, email.toLowerCase().trim(), hashedPassword, otp, otpExpires, myReferralCode, referral_code || null]
+      `INSERT INTO users (name, email, password, verification_otp, otp_code, otp_expires, referral_code, referred_by, is_verified)
+       VALUES ($1, $2, $3, $4, $4, $5, $6, $7, false)`,
+      [name.trim(), cleanEmail, hashedPassword, otp, otpExpires, myReferralCode, referral_code || null]
     );
 
-    // محاولة إرسال الإيميل مع عدم تعطيل الرد في حال الفشل
+    // محاولة إرسال الإيميل
     try {
       if (process.env.EMAIL_USER && process.env.EMAIL_PASS) {
         await transporter.sendMail({
           from: process.env.EMAIL_USER,
-          to: email,
-          subject: "كود التحقق لتفعيل حسابك",
+          to: cleanEmail,
+          subject: "كود تفعيل حسابك",
           text: `كود التحقق الخاص بك هو: ${otp}`
         });
       }
     } catch (mailErr) {
-      console.log("Mail send notice:", mailErr.message);
+      console.log("Mail delivery notice:", mailErr.message);
     }
 
-    console.log(`[OTP Generated] Email: ${email} | Code: ${otp}`);
+    console.log(`[OTP] Generated for ${cleanEmail}: ${otp}`);
+    
+    // إرجاع الكود مع الرسالة لضمان التفعيل الفوري
     res.json({
       success: true,
-      message: `تم إنشاء الحساب! كود التحقق هو: [ ${otp} ] (تم إظهاره لتسهيل التجربة فوراً)`,
+      message: `تم إنشاء الحساب! رمز التحقق هو: [ ${otp} ]`,
       otp: otp
     });
   } catch (err) {
     console.error("Register Error:", err);
-    res.status(500).json({ error: "حدث خطأ في السيرفر" });
+    res.status(500).json({ error: "حدث خطأ أثناء إنشاء الحساب، يرجى المحاولة مجدداً" });
   }
 });
 
-// 2. التحقق من كود الـ OTP
+// 2. التحقق من الرمز
 app.post("/api/verify-otp", async (req, res) => {
   try {
     const { email, otp } = req.body;
-    const userRes = await pool.query("SELECT * FROM users WHERE email = $1", [email.toLowerCase().trim()]);
+    if (!email || !otp) {
+      return res.status(400).json({ error: "البريد الإلكتروني والرمز مطلوبان" });
+    }
+
+    const cleanEmail = email.toLowerCase().trim();
+    const userRes = await pool.query("SELECT * FROM users WHERE email = $1", [cleanEmail]);
     
     if (userRes.rows.length === 0) {
-      return res.status(400).json({ error: "المستخدم غير موجود" });
+      return res.status(400).json({ error: "الحساب غير موجود" });
     }
 
     const user = userRes.rows[0];
-    if (user.otp_code !== otp.trim()) {
+    const storedOtp = user.verification_otp || user.otp_code;
+
+    if (storedOtp !== otp.trim()) {
       return res.status(400).json({ error: "كود التحقق غير صحيح" });
     }
 
-    if (new Date() > new Date(user.otp_expires)) {
-      return res.status(400).json({ error: "انتهت صلاحية الكود" });
-    }
-
-    await pool.query("UPDATE users SET is_verified = true, otp_code = NULL WHERE id = $1", [user.id]);
+    await pool.query(
+      "UPDATE users SET is_verified = true, verification_otp = NULL, otp_code = NULL WHERE id = $1",
+      [user.id]
+    );
 
     const token = jwt.sign({ id: user.id, email: user.email }, SECRET, { expiresIn: "7d" });
-    res.json({ success: true, token, user: { id: user.id, name: user.name, email: user.email, level: user.level } });
+    res.json({
+      success: true,
+      token,
+      user: { id: user.id, name: user.name, email: user.email, level: user.level }
+    });
   } catch (err) {
-    console.error("Verify OTP Error:", err);
-    res.status(500).json({ error: "حدث خطأ في السيرفر" });
+    console.error("Verify Error:", err);
+    res.status(500).json({ error: "تعذر التحقق من الرمز" });
   }
 });
 
@@ -134,7 +155,8 @@ app.post("/api/verify-otp", async (req, res) => {
 app.post("/api/login", async (req, res) => {
   try {
     const { email, password } = req.body;
-    const userRes = await pool.query("SELECT * FROM users WHERE email = $1", [email.toLowerCase().trim()]);
+    const cleanEmail = email.toLowerCase().trim();
+    const userRes = await pool.query("SELECT * FROM users WHERE email = $1", [cleanEmail]);
     
     if (userRes.rows.length === 0) {
       return res.status(400).json({ error: "بيانات الدخول غير صحيحة" });
@@ -151,14 +173,18 @@ app.post("/api/login", async (req, res) => {
     }
 
     const token = jwt.sign({ id: user.id, email: user.email }, SECRET, { expiresIn: "7d" });
-    res.json({ success: true, token, user: { id: user.id, name: user.name, email: user.email, level: user.level } });
+    res.json({
+      success: true,
+      token,
+      user: { id: user.id, name: user.name, email: user.email, level: user.level }
+    });
   } catch (err) {
     console.error("Login Error:", err);
-    res.status(500).json({ error: "حدث خطأ في السيرفر" });
+    res.status(500).json({ error: "خطأ في تسجيل الدخول" });
   }
 });
 
-// 4. استرجاع بيانات المستخدم والإحالات
+// 4. بيانات لوحة التحكم والمستويات
 app.get("/api/dashboard", async (req, res) => {
   try {
     const authHeader = req.headers.authorization;
@@ -176,7 +202,6 @@ app.get("/api/dashboard", async (req, res) => {
       [user.referral_code]
     );
 
-    // حساب المستوى تلقائياً حسب عدد الإحالات (كل 4 إحالات ترفع مستوى)
     const count = referralsRes.rows.length;
     let calculatedLevel = 1;
     if (count >= 8) calculatedLevel = 3;
@@ -194,16 +219,16 @@ app.get("/api/dashboard", async (req, res) => {
     });
   } catch (err) {
     console.error("Dashboard Error:", err);
-    res.status(401).json({ error: "جلسة غير صالحة" });
+    res.status(401).json({ error: "جلسة منتهية" });
   }
 });
 
-// معالجة الصفحات
+// تقديم الواجهة
 app.get("*", (req, res) => {
   res.sendFile(path.join(__dirname, "public", "index.html"));
 });
 
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
-  console.log(`Server running on port ${PORT}`);
+  console.log(`Server listening on port ${PORT}`);
 });
