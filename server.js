@@ -15,15 +15,15 @@ const pool = new Pool({
 
 const JWT_SECRET = process.env.JWT_SECRET || 'my_super_secret_jwt_key_12345';
 
-// تهيئة قاعدة البيانات والتأكد من كل الأعمدة تلقائياً
+// إصلاح وإنشاء جدول المستخدمين وإضافة كافة الأعمدة الناقصة تلقائياً
 async function initDB() {
   try {
     await pool.query(`
       CREATE TABLE IF NOT EXISTS users (
         id SERIAL PRIMARY KEY,
-        name VARCHAR(255) NOT NULL,
+        name VARCHAR(255),
         email VARCHAR(255) UNIQUE NOT NULL,
-        password VARCHAR(255) NOT NULL,
+        password VARCHAR(255),
         referral_code VARCHAR(50) UNIQUE,
         referred_by VARCHAR(50),
         level INTEGER DEFAULT 1,
@@ -33,20 +33,22 @@ async function initDB() {
       );
     `);
 
-    // إضافة الأعمدة إذا كان الجدول قديماً
-    const columns = [
-      "ALTER TABLE users ADD COLUMN IF NOT EXISTS referral_code VARCHAR(50) UNIQUE;",
+    // التأكد من إضافة عمود password وجميع الأعمدة إذا كان الجدول منشأ مسبقاً
+    const alterQueries = [
+      "ALTER TABLE users ADD COLUMN IF NOT EXISTS name VARCHAR(255);",
+      "ALTER TABLE users ADD COLUMN IF NOT EXISTS password VARCHAR(255);",
+      "ALTER TABLE users ADD COLUMN IF NOT EXISTS referral_code VARCHAR(50);",
       "ALTER TABLE users ADD COLUMN IF NOT EXISTS referred_by VARCHAR(50);",
       "ALTER TABLE users ADD COLUMN IF NOT EXISTS level INTEGER DEFAULT 1;",
       "ALTER TABLE users ADD COLUMN IF NOT EXISTS is_verified BOOLEAN DEFAULT TRUE;",
       "ALTER TABLE users ADD COLUMN IF NOT EXISTS verification_otp VARCHAR(10);"
     ];
 
-    for (const col of columns) {
-      await pool.query(col).catch(() => {});
+    for (const q of alterQueries) {
+      await pool.query(q).catch(e => console.log("Alter column notice:", e.message));
     }
 
-    console.log("Database initialized successfully");
+    console.log("Database initialized and schema synced successfully");
   } catch (err) {
     console.error("DB Init Error:", err.message);
   }
@@ -61,7 +63,10 @@ app.post('/api/register', async (req, res) => {
       return res.status(400).json({ error: 'جميع الحقول مطلوبة' });
     }
 
-    const checkUser = await pool.query('SELECT id FROM users WHERE email = $1', [email.toLowerCase().trim()]);
+    const cleanEmail = email.toLowerCase().trim();
+
+    // فحص وجود الحساب مسبقاً
+    const checkUser = await pool.query('SELECT id FROM users WHERE email = $1', [cleanEmail]);
     if (checkUser.rows.length > 0) {
       return res.status(400).json({ error: 'البريد الإلكتروني مسجل مسبقاً' });
     }
@@ -70,10 +75,11 @@ app.post('/api/register', async (req, res) => {
     const myReferral = Math.random().toString(36).substring(2, 8).toUpperCase();
     const otp = Math.floor(100000 + Math.random() * 900000).toString();
 
+    // حفظ البيانات في الأعمدة المتطابقة
     await pool.query(
       `INSERT INTO users (name, email, password, referral_code, referred_by, is_verified, verification_otp)
        VALUES ($1, $2, $3, $4, $5, $6, $7)`,
-      [name, email.toLowerCase().trim(), hashedPassword, myReferral, referral_code || null, true, otp]
+      [name, cleanEmail, hashedPassword, myReferral, referral_code || null, true, otp]
     );
 
     res.json({ message: 'تم إنشاء الحساب بنجاح', otp });
@@ -87,7 +93,8 @@ app.post('/api/register', async (req, res) => {
 app.post('/api/verify-otp', async (req, res) => {
   try {
     const { email, otp } = req.body;
-    const result = await pool.query('SELECT * FROM users WHERE email = $1', [email.toLowerCase().trim()]);
+    const cleanEmail = (email || '').toLowerCase().trim();
+    const result = await pool.query('SELECT * FROM users WHERE email = $1', [cleanEmail]);
     
     if (result.rows.length === 0) {
       return res.status(400).json({ error: 'المستخدم غير موجود' });
@@ -105,14 +112,16 @@ app.post('/api/verify-otp', async (req, res) => {
 app.post('/api/login', async (req, res) => {
   try {
     const { email, password } = req.body;
-    const result = await pool.query('SELECT * FROM users WHERE email = $1', [email.toLowerCase().trim()]);
+    const cleanEmail = (email || '').toLowerCase().trim();
+    const result = await pool.query('SELECT * FROM users WHERE email = $1', [cleanEmail]);
     
     if (result.rows.length === 0) {
       return res.status(400).json({ error: 'البريد الإلكتروني أو كلمة المرور غير صحيحة' });
     }
 
     const user = result.rows[0];
-    const isMatch = await bcrypt.compare(password, user.password);
+    const userPass = user.password || user.password_hash;
+    const isMatch = await bcrypt.compare(password, userPass);
     if (!isMatch) {
       return res.status(400).json({ error: 'البريد الإلكتروني أو كلمة المرور غير صحيحة' });
     }
@@ -120,7 +129,7 @@ app.post('/api/login', async (req, res) => {
     const token = jwt.sign({ id: user.id, email: user.email }, JWT_SECRET, { expiresIn: '7d' });
     res.json({ token });
   } catch (err) {
-    res.status(500).json({ error: 'خطأ في الخادم' });
+    res.status(500).json({ error: 'خطأ في تسجيل الدخول' });
   }
 });
 
@@ -141,7 +150,7 @@ app.get('/api/dashboard', async (req, res) => {
 
     res.json({
       user,
-      referralCount: parseInt(countRes.rows[0].count, 10)
+      referralCount: parseInt(countRes.rows[0].count, 10) || 0
     });
   } catch (err) {
     res.status(401).json({ error: 'جلسة منتهية' });
