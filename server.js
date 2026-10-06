@@ -15,28 +15,15 @@ const pool = new Pool({
 
 const JWT_SECRET = process.env.JWT_SECRET || 'my_super_secret_jwt_key_12345';
 
-// إصلاح وإنشاء جدول المستخدمين وإضافة كافة الأعمدة الناقصة تلقائياً
+// مزامنة كافة احتمالات أسماء الأعمدة في قاعدة البيانات
 async function initDB() {
   try {
-    await pool.query(`
-      CREATE TABLE IF NOT EXISTS users (
-        id SERIAL PRIMARY KEY,
-        name VARCHAR(255),
-        email VARCHAR(255) UNIQUE NOT NULL,
-        password VARCHAR(255),
-        referral_code VARCHAR(50) UNIQUE,
-        referred_by VARCHAR(50),
-        level INTEGER DEFAULT 1,
-        is_verified BOOLEAN DEFAULT TRUE,
-        verification_otp VARCHAR(10),
-        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-      );
-    `);
-
-    // التأكد من إضافة عمود password وجميع الأعمدة إذا كان الجدول منشأ مسبقاً
     const alterQueries = [
       "ALTER TABLE users ADD COLUMN IF NOT EXISTS name VARCHAR(255);",
       "ALTER TABLE users ADD COLUMN IF NOT EXISTS password VARCHAR(255);",
+      "ALTER TABLE users ADD COLUMN IF NOT EXISTS password_hash VARCHAR(255);",
+      "ALTER TABLE users ALTER COLUMN password_hash DROP NOT NULL;",
+      "ALTER TABLE users ALTER COLUMN password DROP NOT NULL;",
       "ALTER TABLE users ADD COLUMN IF NOT EXISTS referral_code VARCHAR(50);",
       "ALTER TABLE users ADD COLUMN IF NOT EXISTS referred_by VARCHAR(50);",
       "ALTER TABLE users ADD COLUMN IF NOT EXISTS level INTEGER DEFAULT 1;",
@@ -45,10 +32,10 @@ async function initDB() {
     ];
 
     for (const q of alterQueries) {
-      await pool.query(q).catch(e => console.log("Alter column notice:", e.message));
+      await pool.query(q).catch(() => {});
     }
 
-    console.log("Database initialized and schema synced successfully");
+    console.log("Database synced successfully");
   } catch (err) {
     console.error("DB Init Error:", err.message);
   }
@@ -65,7 +52,6 @@ app.post('/api/register', async (req, res) => {
 
     const cleanEmail = email.toLowerCase().trim();
 
-    // فحص وجود الحساب مسبقاً
     const checkUser = await pool.query('SELECT id FROM users WHERE email = $1', [cleanEmail]);
     if (checkUser.rows.length > 0) {
       return res.status(400).json({ error: 'البريد الإلكتروني مسجل مسبقاً' });
@@ -75,11 +61,11 @@ app.post('/api/register', async (req, res) => {
     const myReferral = Math.random().toString(36).substring(2, 8).toUpperCase();
     const otp = Math.floor(100000 + Math.random() * 900000).toString();
 
-    // حفظ البيانات في الأعمدة المتطابقة
+    // نملأ العمودين معاً password و password_hash لتفادي أي خطأ أياً كان
     await pool.query(
-      `INSERT INTO users (name, email, password, referral_code, referred_by, is_verified, verification_otp)
-       VALUES ($1, $2, $3, $4, $5, $6, $7)`,
-      [name, cleanEmail, hashedPassword, myReferral, referral_code || null, true, otp]
+      `INSERT INTO users (name, email, password, password_hash, referral_code, referred_by, is_verified, verification_otp)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8)`,
+      [name, cleanEmail, hashedPassword, hashedPassword, myReferral, referral_code || null, true, otp]
     );
 
     res.json({ message: 'تم إنشاء الحساب بنجاح', otp });
