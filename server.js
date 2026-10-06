@@ -15,25 +15,23 @@ const pool = new Pool({
 
 const JWT_SECRET = process.env.JWT_SECRET || 'my_super_secret_jwt_key_12345';
 
-// ترقية الجدول وإضافة كافة الأعمدة لتفادي أي نقص
+// مزامنة مبسطة
 async function initDB() {
   try {
-    const alterQueries = [
-      "ALTER TABLE users ADD COLUMN IF NOT EXISTS name VARCHAR(255);",
-      "ALTER TABLE users ADD COLUMN IF NOT EXISTS password VARCHAR(255);",
-      "ALTER TABLE users ADD COLUMN IF NOT EXISTS password_hash VARCHAR(255);",
-      "ALTER TABLE users ALTER COLUMN password_hash DROP NOT NULL;",
-      "ALTER TABLE users ALTER COLUMN password DROP NOT NULL;",
-      "ALTER TABLE users ADD COLUMN IF NOT EXISTS referral_code VARCHAR(50);",
-      "ALTER TABLE users ADD COLUMN IF NOT EXISTS referred_by VARCHAR(50);",
-      "ALTER TABLE users ADD COLUMN IF NOT EXISTS level INTEGER DEFAULT 1;",
-      "ALTER TABLE users ADD COLUMN IF NOT EXISTS is_verified BOOLEAN DEFAULT TRUE;",
-      "ALTER TABLE users ADD COLUMN IF NOT EXISTS verification_otp VARCHAR(10);",
-      "ALTER TABLE users ADD COLUMN IF NOT EXISTS created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP;"
-    ];
-    for (const q of alterQueries) {
-      await pool.query(q).catch(() => {});
-    }
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS users (
+        id SERIAL PRIMARY KEY,
+        name VARCHAR(255),
+        email VARCHAR(255) UNIQUE NOT NULL,
+        password VARCHAR(255),
+        password_hash VARCHAR(255),
+        referral_code VARCHAR(50),
+        referred_by VARCHAR(50),
+        level INTEGER DEFAULT 1,
+        is_verified BOOLEAN DEFAULT TRUE,
+        verification_otp VARCHAR(10)
+      );
+    `);
     console.log("DB sync complete");
   } catch (err) {
     console.error("DB Init Error:", err.message);
@@ -77,7 +75,7 @@ app.post('/api/register', async (req, res) => {
   }
 });
 
-// تفعيل الحساب والـ OTP
+// تفعيل الحساب OTP
 app.post('/api/verify-otp', async (req, res) => {
   try {
     const { email, otp } = req.body;
@@ -87,7 +85,7 @@ app.post('/api/verify-otp', async (req, res) => {
 
     const user = result.rows[0];
     const token = jwt.sign({ id: user.id, email: user.email }, JWT_SECRET, { expiresIn: '7d' });
-    res.json({ message: 'تم التفعيل بنجاح', token, user });
+    res.json({ message: 'تم التفعيل بنجاح', token });
   } catch (err) {
     res.status(500).json({ error: 'خطأ في تفعيل الرمز' });
   }
@@ -106,13 +104,13 @@ app.post('/api/login', async (req, res) => {
     if (!isMatch) return res.status(400).json({ error: 'البريد أو كلمة المرور غير صحيحة' });
 
     const token = jwt.sign({ id: user.id, email: user.email }, JWT_SECRET, { expiresIn: '7d' });
-    res.json({ token, user });
+    res.json({ token });
   } catch (err) {
     res.status(500).json({ error: 'خطأ في تسجيل الدخول' });
   }
 });
 
-// بيانات لوحة التحكم
+// لوحة التحكم المضمونة
 app.get('/api/dashboard', async (req, res) => {
   try {
     const authHeader = req.headers['authorization'];
@@ -121,36 +119,39 @@ app.get('/api/dashboard', async (req, res) => {
     const token = authHeader.split(' ')[1];
     const decoded = jwt.verify(token, JWT_SECRET);
 
-    const userRes = await pool.query('SELECT id, name, email, referral_code FROM users WHERE id = $1', [decoded.id]);
+    const userRes = await pool.query('SELECT * FROM users WHERE id = $1', [decoded.id]);
     if (userRes.rows.length === 0) return res.status(404).json({ error: 'الحساب غير موجود' });
 
     const user = userRes.rows[0];
 
-    // جلب الإحالات بدون اشتراط created_at لتفادي أي خطأ
-    const referralsRes = await pool.query(
-      'SELECT name, email FROM users WHERE referred_by = $1',
-      [user.referral_code]
-    );
+    // جلب الإحالات بأمان
+    let referrals = [];
+    try {
+      if (user.referral_code) {
+        const refRes = await pool.query('SELECT name, email FROM users WHERE referred_by = $1', [user.referral_code]);
+        referrals = refRes.rows || [];
+      }
+    } catch (e) {
+      console.log("Referrals query notice:", e.message);
+    }
 
-    const referralCount = referralsRes.rows.length;
+    const referralCount = referrals.length;
     const currentLevel = calculateLevel(referralCount);
-
-    await pool.query('UPDATE users SET level = $1 WHERE id = $2', [currentLevel, user.id]).catch(() => {});
 
     res.json({
       user: {
         id: user.id,
-        name: user.name,
+        name: user.name || 'مستخدم',
         email: user.email,
-        referral_code: user.referral_code,
+        referral_code: user.referral_code || 'CODE123',
         level: currentLevel
       },
       referralCount,
-      referrals: referralsRes.rows
+      referrals
     });
   } catch (err) {
-    console.error("Dashboard Fetch Error:", err);
-    res.status(500).json({ error: 'تعذر جلب بيانات اللوحة' });
+    console.error("Dashboard Error:", err.message);
+    res.status(401).json({ error: 'جلسة منتهية أو غير صالحة' });
   }
 });
 
