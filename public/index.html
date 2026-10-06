@@ -8,87 +8,108 @@
     :root {
       --primary: #f59e0b;
       --bg: #0f172a;
-      --card-bg: #1e293b;
+      --card: #1e293b;
       --text: #f8fafc;
       --border: #334155;
+      --success: #10b981;
     }
-    * { box-sizing: border-box; font-family: system-ui, -apple-system, sans-serif; }
+    * { box-sizing: border-box; font-family: system-ui, -apple-system, sans-serif; margin: 0; padding: 0; }
     body {
       background-color: var(--bg);
       color: var(--text);
-      margin: 0;
-      padding: 20px;
+      padding: 20px 15px;
       display: flex;
       flex-direction: column;
       align-items: center;
       min-height: 100vh;
     }
-    h1 { color: var(--primary); font-size: 1.4rem; text-align: center; margin-bottom: 24px; }
+    h1 { color: var(--primary); font-size: 1.5rem; text-align: center; margin-bottom: 20px; }
     .card {
-      background: var(--card-bg);
+      background: var(--card);
       border: 1px solid var(--border);
-      border-radius: 12px;
+      border-radius: 16px;
       padding: 24px;
       width: 100%;
-      max-width: 400px;
-      box-shadow: 0 4px 15px rgba(0,0,0,0.3);
+      max-width: 480px;
+      box-shadow: 0 8px 24px rgba(0,0,0,0.3);
     }
-    .tabs { display: flex; gap: 8px; margin-bottom: 20px; }
+    .tabs { display: flex; gap: 8px; margin-bottom: 18px; }
     .tab-btn {
-      flex: 1;
-      padding: 10px;
-      border: none;
-      border-radius: 8px;
-      background: #0f172a;
-      color: var(--text);
-      cursor: pointer;
-      font-weight: bold;
+      flex: 1; padding: 10px; border: none; border-radius: 8px;
+      background: #0f172a; color: var(--text); cursor: pointer; font-weight: bold;
     }
-    .tab-btn.active {
-      background: var(--primary);
-      color: #000;
-    }
+    .tab-btn.active { background: var(--primary); color: #000; }
     input {
-      width: 100%;
-      padding: 12px;
-      margin-bottom: 12px;
-      border-radius: 8px;
-      border: 1px solid var(--border);
-      background: #0f172a;
-      color: #fff;
-      font-size: 1rem;
+      width: 100%; padding: 12px; margin-bottom: 10px; border-radius: 8px;
+      border: 1px solid var(--border); background: #0f172a; color: #fff; font-size: 0.95rem;
     }
     button.submit-btn {
-      width: 100%;
-      padding: 12px;
-      background: var(--primary);
-      border: none;
-      border-radius: 8px;
-      color: #000;
-      font-weight: bold;
-      font-size: 1rem;
-      cursor: pointer;
-      margin-top: 6px;
+      width: 100%; padding: 12px; background: var(--primary); border: none;
+      border-radius: 8px; color: #000; font-weight: bold; font-size: 1rem; cursor: pointer; margin-top: 6px;
     }
-    .msg {
-      margin-top: 14px;
-      text-align: center;
-      font-size: 0.95rem;
-      line-height: 1.4;
-    }
+    .msg { margin-top: 10px; text-align: center; font-size: 0.9rem; }
     .msg.error { color: #f87171; }
     .msg.success { color: #4ade80; }
     .otp-box {
+      background: #0f172a; border: 2px dashed var(--primary); color: var(--primary);
+      font-size: 1.6rem; font-weight: bold; text-align: center; padding: 12px; border-radius: 8px; margin: 10px 0; letter-spacing: 5px;
+    }
+
+    /* تفاصيل لوحة التحكم والمستويات */
+    .level-container {
       background: #0f172a;
-      border: 1px dashed var(--primary);
-      color: var(--primary);
-      font-size: 1.3rem;
-      font-weight: bold;
+      border-radius: 12px;
+      padding: 15px;
+      margin-bottom: 16px;
+      border: 1px solid var(--border);
       text-align: center;
+    }
+    .level-title { font-size: 1.2rem; font-weight: bold; color: var(--primary); }
+    .progress-bar-bg {
+      background: #334155;
+      border-radius: 20px;
+      height: 12px;
+      margin: 10px 0 6px;
+      overflow: hidden;
+    }
+    .progress-bar-fill {
+      background: linear-gradient(90deg, var(--primary), var(--success));
+      height: 100%;
+      width: 0%;
+      transition: width 0.4s ease;
+    }
+    .ref-link-card {
+      background: #0f172a;
+      border-radius: 10px;
+      padding: 12px;
+      border: 1px solid var(--border);
+      margin-bottom: 16px;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+    .copy-btn {
+      background: var(--success);
+      color: #fff;
+      border: none;
       padding: 10px;
       border-radius: 8px;
-      margin-top: 10px;
-      letter-spacing: 4px;
+      font-weight: bold;
+      cursor: pointer;
+    }
+    .referral-list-container {
+      margin-top: 15px;
+    }
+    .referral-item {
+      background: #0f172a;
+      border: 1px solid var(--border);
+      padding: 10px 12px;
+      border-radius: 8px;
+      margin-bottom: 8px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-size: 0.9rem;
     }
   </style>
 </head>
@@ -97,30 +118,26 @@
   <h1>نظام لوحات الإحالات والمستويات</h1>
 
   <div class="card" id="authBox">
-    <div class="tabs">
+    <div class="tabs" id="tabGroup">
       <button class="tab-btn active" id="tabReg" onclick="switchTab('register')">إنشاء حساب</button>
       <button class="tab-btn" id="tabLogin" onclick="switchTab('login')">تسجيل الدخول</button>
     </div>
 
-    <!-- نموذج إنشاء حساب -->
     <div id="registerForm">
-      <input type="text" id="regName" placeholder="اسمك الكامل">
+      <input type="text" id="regName" placeholder="الاسم الكامل">
       <input type="email" id="regEmail" placeholder="البريد الإلكتروني">
       <input type="password" id="regPass" placeholder="كلمة المرور">
       <input type="text" id="regRef" placeholder="رمز الإحالة (اختياري)">
       <button class="submit-btn" onclick="handleRegister()">إنشاء الحساب وإرسال الرمز</button>
     </div>
 
-    <!-- نموذج كود التحقق OTP -->
     <div id="otpForm" style="display: none;">
-      <p style="font-size: 0.9rem; text-align: center; color: #cbd5e1;">أدخل رمز التحقق الذي ظهر لك:</p>
+      <p style="text-align: center; color: #cbd5e1;">رمز التحقق الخاص بك:</p>
       <div id="otpDisplay" class="otp-box"></div>
-      <br>
-      <input type="text" id="otpInput" placeholder="أدخل كود الـ OTP المكون من 6 أرقام">
+      <input type="text" id="otpInput" placeholder="أدخل رمز التحقق">
       <button class="submit-btn" onclick="handleVerify()">تفعيل الحساب والدخول</button>
     </div>
 
-    <!-- نموذج تسجيل الدخول -->
     <div id="loginForm" style="display: none;">
       <input type="email" id="logEmail" placeholder="البريد الإلكتروني">
       <input type="password" id="logPass" placeholder="كلمة المرور">
@@ -130,18 +147,48 @@
     <div id="statusMsg" class="msg"></div>
   </div>
 
-  <!-- لوحة التحكم بعد الدخول -->
-  <div class="card" id="dashBox" style="display: none; max-width: 600px;">
-    <h2 id="welcomeUser" style="color: var(--primary); margin-top:0;"></h2>
-    <p>المستوى الحالي: <strong id="userLevel" style="color:#38bdf8;"></strong></p>
-    <p>كود الإحالة الخاص بك: <code id="userRef" style="background:#0f172a; padding:4px 8px; border-radius:4px; color:var(--primary);"></code></p>
-    <p>عدد الإحالات الناجحة: <span id="refCount">0</span></p>
-    <hr style="border-color: var(--border); margin: 20px 0;">
-    <button class="submit-btn" style="background: #ef4444; color: #fff;" onclick="logout()">تسجيل الخروج</button>
+  <!-- لوحة التحكم الاحترافية للمستويات والإحالات -->
+  <div class="card" id="dashBox" style="display: none;">
+    <h2 id="userName" style="color: var(--primary); margin-bottom: 12px;">أهلاً بك</h2>
+
+    <!-- بطاقة المستوى والترقية -->
+    <div class="level-container">
+      <div class="level-title" id="userLevelBadge">المستوى 1 / 3</div>
+      <div class="progress-bar-bg">
+        <div class="progress-bar-fill" id="levelProgress"></div>
+      </div>
+      <div style="font-size: 0.85rem; color: #94a3b8;" id="progressText">0 من 4 إحالات للوصول إلى المستوى 2</div>
+    </div>
+
+    <!-- بطاقة رابط الإحالة -->
+    <div class="ref-link-card">
+      <span style="font-size: 0.85rem; color: #94a3b8;">رابط الإحالة المباشر الخاص بك:</span>
+      <div style="background:#1e293b; padding:8px; border-radius:6px; font-size:0.85rem; word-break:break-all; color:#38bdf8;" id="refLink"></div>
+      <button class="copy-btn" onclick="copyRefLink()">نسخ رابط الإحالة 📋</button>
+    </div>
+
+    <!-- قائمة المحالين -->
+    <div class="referral-list-container">
+      <h3 style="font-size: 1rem; margin-bottom: 8px; color: var(--primary);">قائمة الأشخاص الذين تسجلوا عن طريقك (<span id="refCountBadge">0</span>)</h3>
+      <div id="referralsList">
+        <div style="text-align: center; color: #64748b; font-size: 0.9rem; padding: 10px;">لا توجد إحالات مسجلة بعد</div>
+      </div>
+    </div>
+
+    <button class="submit-btn" style="background: #ef4444; color: #fff; margin-top: 15px;" onclick="logout()">تسجيل الخروج</button>
   </div>
 
   <script>
     let currentEmail = "";
+
+    window.addEventListener('load', () => {
+      const urlParams = new URLSearchParams(window.location.search);
+      const ref = urlParams.get('ref');
+      if (ref && document.getElementById('regRef')) {
+        document.getElementById('regRef').value = ref;
+      }
+      checkAuth();
+    });
 
     function switchTab(type) {
       document.getElementById('statusMsg').innerText = '';
@@ -169,7 +216,7 @@
 
       if (!name || !email || !password) {
         msg.className = "msg error";
-        msg.innerText = "يرجى ملء جميع الحقول المطلوبة";
+        msg.innerText = "يرجى ملء كافة الحقول";
         return;
       }
 
@@ -186,34 +233,25 @@
 
         if (res.ok) {
           currentEmail = email;
+          document.getElementById('tabGroup').style.display = 'none';
           document.getElementById('registerForm').style.display = 'none';
           document.getElementById('otpForm').style.display = 'block';
-          document.getElementById('otpDisplay').innerText = data.otp || "تم إصدار الرمز";
-          if (data.otp) {
-            document.getElementById('otpInput').value = data.otp;
-          }
+          document.getElementById('otpDisplay').innerText = data.otp;
+          document.getElementById('otpInput').value = data.otp;
           msg.className = "msg success";
-          msg.innerText = "تم إنشاء الحساب بنجاح! انسخ الكود أعلاه واضغط تفعيل.";
+          msg.innerText = "تم إنشاء الحساب بنجاح! اضغط تفعيل للدخول.";
         } else {
           msg.className = "msg error";
           msg.innerText = data.error || "تعذر التسجيل";
         }
       } catch (err) {
         msg.className = "msg error";
-        msg.innerText = "خطأ في الاتصال بالخادم";
+        msg.innerText = "خطأ في الاتصال";
       }
     }
 
     async function handleVerify() {
       const otp = document.getElementById('otpInput').value.trim();
-      const msg = document.getElementById('statusMsg');
-
-      if (!otp) {
-        msg.className = "msg error";
-        msg.innerText = "يرجى إدخال الرمز";
-        return;
-      }
-
       try {
         const res = await fetch("/api/verify-otp", {
           method: "POST",
@@ -221,25 +259,22 @@
           body: JSON.stringify({ email: currentEmail, otp })
         });
         const data = await res.json();
-
         if (res.ok) {
           localStorage.setItem("token", data.token);
           loadDashboard();
         } else {
-          msg.className = "msg error";
-          msg.innerText = data.error || "الرمز غير صحيح";
+          document.getElementById('statusMsg').className = "msg error";
+          document.getElementById('statusMsg').innerText = data.error;
         }
       } catch (err) {
-        msg.className = "msg error";
-        msg.innerText = "فشل الاتصال";
+        document.getElementById('statusMsg').className = "msg error";
+        document.getElementById('statusMsg').innerText = "فشل الاتصال";
       }
     }
 
     async function handleLogin() {
       const email = document.getElementById('logEmail').value.trim();
       const password = document.getElementById('logPass').value;
-      const msg = document.getElementById('statusMsg');
-
       try {
         const res = await fetch("/api/login", {
           method: "POST",
@@ -247,17 +282,16 @@
           body: JSON.stringify({ email, password })
         });
         const data = await res.json();
-
         if (res.ok) {
           localStorage.setItem("token", data.token);
           loadDashboard();
         } else {
-          msg.className = "msg error";
-          msg.innerText = data.error || "خطأ في تسجيل الدخول";
+          document.getElementById('statusMsg').className = "msg error";
+          document.getElementById('statusMsg').innerText = data.error;
         }
       } catch (err) {
-        msg.className = "msg error";
-        msg.innerText = "خطأ في الاتصال";
+        document.getElementById('statusMsg').className = "msg error";
+        document.getElementById('statusMsg').innerText = "خطأ في الاتصال";
       }
     }
 
@@ -271,29 +305,68 @@
         });
         const data = await res.json();
 
-        if (res.ok) {
+        if (res.ok && data.user) {
           document.getElementById('authBox').style.display = 'none';
           document.getElementById('dashBox').style.display = 'block';
-          document.getElementById('welcomeUser').innerText = "مرحباً، " + data.user.name;
-          document.getElementById('userLevel').innerText = "المستوى " + data.user.level;
-          document.getElementById('userRef').innerText = data.user.referral_code;
-          document.getElementById('refCount').innerText = data.referralCount;
-        } else {
-          logout();
+
+          document.getElementById('userName').innerText = "مرحباً، " + data.user.name;
+          document.getElementById('refLink').innerText = window.location.origin + "/?ref=" + data.user.referral_code;
+          document.getElementById('refCountBadge').innerText = data.referralCount;
+
+          // تحديث المستوى والتقدم
+          const count = data.referralCount;
+          const level = data.user.level;
+          document.getElementById('userLevelBadge').innerText = `المستوى ${level} من 3`;
+
+          let progressPercent = 0;
+          let progressInfo = "";
+
+          if (level === 1) {
+            progressPercent = (count / 4) * 100;
+            progressInfo = `${count} من 4 إحالات للوصول إلى المستوى 2`;
+          } else if (level === 2) {
+            progressPercent = ((count - 4) / 4) * 100;
+            progressInfo = `${count - 4} من 4 إحالات للوصول إلى المستوى 3`;
+          } else {
+            progressPercent = 100;
+            progressInfo = "🎉 مبروك! لقد وصلت إلى المستوى النهائي (المستوى 3)";
+          }
+
+          document.getElementById('levelProgress').style.width = Math.min(progressPercent, 100) + "%";
+          document.getElementById('progressText').innerText = progressInfo;
+
+          // عرض قائمة الإحالات
+          const listDiv = document.getElementById('referralsList');
+          if (data.referrals && data.referrals.length > 0) {
+            listDiv.innerHTML = data.referrals.map((r, i) => `
+              <div class="referral-item">
+                <span><strong>${i + 1}.</strong> ${r.name}</span>
+                <span style="color:#64748b; font-size:0.8rem;">${new Date(r.created_at).toLocaleDateString('ar-EG')}</span>
+              </div>
+            `).join('');
+          } else {
+            listDiv.innerHTML = '<div style="text-align: center; color: #64748b; font-size: 0.9rem; padding: 10px;">لا توجد إحالات مسجلة بعد</div>';
+          }
         }
-      } catch {
-        logout();
+      } catch (err) {
+        console.error(err);
       }
+    }
+
+    function checkAuth() {
+      if (localStorage.getItem("token")) {
+        loadDashboard();
+      }
+    }
+
+    function copyRefLink() {
+      const link = document.getElementById('refLink').innerText;
+      navigator.clipboard.writeText(link).then(() => alert("تم نسخ رابط الإحالة بنجاح!"));
     }
 
     function logout() {
       localStorage.removeItem("token");
       location.reload();
-    }
-
-    // تحقق من تسجيل الدخول عند الفتح
-    if (localStorage.getItem("token")) {
-      loadDashboard();
     }
   </script>
 </body>
