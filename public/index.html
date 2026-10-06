@@ -3,137 +3,205 @@
 <head>
   <meta charset="utf-8"/>
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>لوحة مستوياتي</title>
+  <title>لوحة المستويات والإحالات</title>
   <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;900&display=swap" rel="stylesheet">
   <style>
     * { box-sizing: border-box; font-family: 'Cairo', sans-serif; }
-    body { margin: 0; background: #0b192c; color: #fff; min-height: 100vh; display: flex; flex-direction: column; align-items: center; padding-bottom: 30px; }
-    header { width: 100%; background: #1e3e62; padding: 18px 10px; text-align: center; box-shadow: 0 4px 10px rgba(0,0,0,0.3); }
-    header h1 { margin: 0; font-size: 22px; color: #ffb200; }
-    header p { margin: 5px 0 0; font-size: 13px; color: #d1d5db; }
-    .card { background: #1e3e62; border-radius: 16px; padding: 22px; width: 92%; max-width: 480px; margin-top: 20px; box-shadow: 0 8px 25px rgba(0,0,0,0.4); text-align: center; }
-    .tabs { display: flex; gap: 8px; margin-bottom: 20px; }
-    .tab { flex: 1; padding: 10px; border: none; border-radius: 8px; cursor: pointer; font-weight: 700; background: #0b192c; color: #fff; }
+    body { margin: 0; background: #071527; color: #fff; min-height: 100vh; display: flex; flex-direction: column; align-items: center; padding-bottom: 40px; }
+    header { width: 100%; background: #0f243e; padding: 16px 12px; text-align: center; border-bottom: 2px solid #1e3e62; }
+    header h1 { margin: 0; font-size: 20px; color: #ffb200; }
+    
+    .card { background: #0f243e; border-radius: 18px; padding: 20px; width: 92%; max-width: 440px; margin-top: 15px; box-shadow: 0 8px 30px rgba(0,0,0,0.5); text-align: center; border: 1px solid #1e3e62; }
+    .tabs { display: flex; gap: 8px; margin-bottom: 18px; }
+    .tab { flex: 1; padding: 10px; border: none; border-radius: 8px; cursor: pointer; font-weight: 700; background: #071527; color: #fff; }
     .tab.active { background: #ffb200; color: #000; }
-    input { width: 100%; padding: 12px; margin-bottom: 12px; border-radius: 8px; border: 1px solid #334155; background: #0b192c; color: #fff; text-align: right; }
-    button.btn { width: 100%; padding: 12px; border-radius: 8px; border: none; background: #ffb200; color: #000; font-weight: 900; font-size: 16px; cursor: pointer; }
+    input { width: 100%; padding: 12px; margin-bottom: 12px; border-radius: 8px; border: 1px solid #334155; background: #071527; color: #fff; text-align: right; }
+    button.btn { width: 100%; padding: 12px; border-radius: 8px; border: none; background: #ffb200; color: #000; font-weight: 900; font-size: 15px; cursor: pointer; }
+    .btn-secondary { background: #334155; color: #fff; margin-top: 8px; }
+    .link-text { color: #38bdf8; font-size: 13px; cursor: pointer; margin-top: 12px; display: inline-block; }
     .hidden { display: none !important; }
     .error { color: #f87171; font-size: 13px; margin-top: 8px; }
-    .stats { display: flex; gap: 10px; margin-bottom: 16px; }
-    .stat { flex: 1; background: #0b192c; padding: 12px; border-radius: 12px; border: 1px solid #334155; }
-    .stat .val { font-size: 22px; font-weight: 900; color: #ffb200; }
-    .stat .lbl { font-size: 12px; color: #94a3b8; }
-    
-    .board-container { background: #081220; border-radius: 16px; padding: 20px 10px; margin: 18px 0; border: 2px solid #ffb200; }
-    .board-title { font-size: 16px; font-weight: 800; color: #ffb200; margin-bottom: 15px; }
-    
-    .board-level-legend { display: flex; flex-direction: column; align-items: center; justify-content: center; margin-bottom: 25px; }
-    .circle-legend { width: 85px; height: 85px; border-radius: 50%; background: linear-gradient(135deg, #ffb200, #ff5722); display: flex; flex-direction: column; align-items: center; justify-content: center; box-shadow: 0 0 20px rgba(255, 178, 0, 0.6); border: 3px solid #fff; font-size: 12px; font-weight: 900; color: #000; }
-    .circle-legend span { font-size: 10px; color: #fff; background: rgba(0,0,0,0.6); padding: 2px 6px; border-radius: 6px; margin-top: 2px; }
+    .success { color: #4ade80; font-size: 13px; margin-top: 8px; }
 
-    .board-grid { display: flex; justify-content: space-around; gap: 10px; flex-wrap: wrap; margin-top: 10px; }
-    .slot { display: flex; flex-direction: column; align-items: center; width: 30%; }
-    .slot-circle { width: 65px; height: 65px; border-radius: 50%; background: #1e3e62; border: 2px dashed #94a3b8; display: flex; flex-direction: column; align-items: center; justify-content: center; font-size: 11px; color: #94a3b8; }
-    .slot-circle.filled { background: linear-gradient(135deg, #00c853, #64dd17); border: 2px solid #fff; color: #000; font-weight: 800; box-shadow: 0 0 12px rgba(0, 200, 83, 0.5); }
-    .slot-label { font-size: 11px; margin-top: 6px; font-weight: 700; color: #e2e8f0; }
+    /* قائمة بطاقات المستويات الثلاثة */
+    .boards-list { display: flex; flex-direction: column; gap: 12px; margin: 15px 0; }
+    .board-card { background: #ffffff; color: #0f243e; border-radius: 14px; padding: 14px 18px; display: flex; justify-content: space-between; align-items: center; box-shadow: 0 4px 12px rgba(0,0,0,0.2); }
+    .board-info { text-align: right; }
+    .board-name { font-size: 18px; font-weight: 900; }
+    .board-val { font-size: 12px; color: #64748b; font-weight: 700; }
+    .btn-view { background: #475569; color: #fff; border: none; padding: 7px 16px; border-radius: 8px; font-weight: 700; cursor: pointer; }
+    .btn-view.active-board { background: #0284c7; }
+
+    /* تفاصيل اللوحة المختارة */
+    .board-view-container { background: #0a192f; border-radius: 16px; padding: 18px 12px; border: 2px solid #ffb200; margin-top: 15px; }
+    .board-header-tag { font-size: 15px; font-weight: 900; color: #ffb200; margin-bottom: 15px; }
     
-    .link-box { background: #0b192c; padding: 12px; border-radius: 10px; margin-top: 15px; word-break: break-all; font-size: 12px; border: 1px dashed #ffb200; color: #38bdf8; }
-    .logout-btn { background: #ef4444; color: #fff; padding: 6px 14px; border-radius: 8px; border: none; font-size: 12px; font-weight: 700; cursor: pointer; float: left; }
+    .leader-box { width: 90px; height: 90px; border-radius: 50%; margin: 0 auto 20px auto; background: linear-gradient(135deg, #ffb200, #ff5722); display: flex; flex-direction: column; align-items: center; justify-content: center; color: #000; font-weight: 900; box-shadow: 0 0 20px rgba(255, 178, 0, 0.5); border: 3px solid #fff; }
+    .leader-box span { font-size: 10px; background: rgba(0,0,0,0.6); color: #fff; padding: 2px 6px; border-radius: 6px; margin-top: 2px; }
+
+    /* شبكة الإحالات الأربعة */
+    .slots-grid { display: flex; justify-content: space-between; gap: 6px; }
+    .slot-item { flex: 1; display: flex; flex-direction: column; align-items: center; }
+    .slot-ball { width: 55px; height: 55px; border-radius: 50%; background: #1e3e62; border: 2px dashed #64748b; display: flex; align-items: center; justify-content: center; font-size: 10px; color: #94a3b8; }
+    .slot-ball.active { background: linear-gradient(135deg, #10b981, #059669); border: 2px solid #fff; color: #fff; font-weight: 800; box-shadow: 0 0 10px rgba(16, 185, 129, 0.6); }
+    .slot-name { font-size: 10px; margin-top: 6px; font-weight: 700; color: #cbd5e1; word-break: break-all; }
+
+    .link-container { background: #071527; padding: 10px; border-radius: 10px; margin-top: 15px; font-size: 11px; border: 1px dashed #ffb200; color: #38bdf8; word-break: break-all; }
+    .logout-btn { background: #ef4444; color: #fff; padding: 5px 12px; border-radius: 6px; border: none; font-size: 11px; font-weight: 700; cursor: pointer; float: left; }
   </style>
 </head>
 <body>
 
   <header>
-    <h1>لوحة الإحالات والمستويات</h1>
-    <p>3 إحالات نشطة للانتقال المباشر إلى المستوى التالي</p>
+    <h1>نظام لوحات الإحالات والمستويات</h1>
   </header>
 
+  <!-- بطاقة المصادقة والتسجيل -->
   <section class="card" id="auth">
-    <div class="tabs">
-      <button class="tab active" id="tab-login" onclick="tab('login')">تسجيل الدخول</button>
-      <button class="tab" id="tab-reg" onclick="tab('reg')">إنشاء حساب</button>
+    <div class="tabs" id="auth-tabs">
+      <button class="tab active" id="tab-login" onclick="showView('login')">تسجيل الدخول</button>
+      <button class="tab" id="tab-reg" onclick="showView('reg')">إنشاء حساب</button>
     </div>
 
+    <!-- نموذج الدخول -->
     <div id="login-form">
       <input type="email" id="login-email" placeholder="البريد الإلكتروني"/>
       <input type="password" id="login-pass" placeholder="كلمة المرور"/>
       <button class="btn" onclick="login()">دخول</button>
+      <div><span class="link-text" onclick="showView('forgot')">نسيت كلمة المرور؟</span></div>
     </div>
 
+    <!-- نموذج إنشاء حساب -->
     <div id="reg-form" class="hidden">
       <input type="text" id="reg-name" placeholder="اسمك الكامل"/>
       <input type="email" id="reg-email" placeholder="البريد الإلكتروني"/>
       <input type="password" id="reg-pass" placeholder="كلمة المرور"/>
-      <button class="btn" onclick="register()">إنشاء الحساب</button>
+      <button class="btn" onclick="register()">إنشاء الحساب وإرسال الرمز</button>
     </div>
+
+    <!-- نافذة تأكيد رمز OTP للتسجيل -->
+    <div id="verify-form" class="hidden">
+      <p style="font-size: 13px; color: #94a3b8;">تم إرسال كود التحقق إلى بريدك الإلكتروني، يرجى كتابته لتفعيل الحساب:</p>
+      <input type="text" id="verify-otp" placeholder="أدخل كود التحقق (6 أرقام)" maxlength="6" style="text-align: center; letter-spacing: 5px; font-size: 20px; font-weight: bold;"/>
+      <button class="btn" onclick="verifyOtp()">تأكيد وتفعيل الحساب</button>
+      <button class="btn btn-secondary" onclick="showView('reg')">الرجوع</button>
+    </div>
+
+    <!-- نافذة نسيت كلمة المرور -->
+    <div id="forgot-form" class="hidden">
+      <p style="font-size: 13px; color: #94a3b8;">أدخل بريدك الإلكتروني لاستلام رمز إعادة التعيين:</p>
+      <input type="email" id="forgot-email" placeholder="البريد الإلكتروني"/>
+      <button class="btn" onclick="sendResetOtp()">إرسال الرمز</button>
+      <button class="btn btn-secondary" onclick="showView('login')">إلغاء</button>
+    </div>
+
+    <!-- نافذة تعيين كلمة مرور جديدة -->
+    <div id="reset-form" class="hidden">
+      <p style="font-size: 13px; color: #94a3b8;">أدخل الرمز المستلم وكلمة المرور الجديدة:</p>
+      <input type="text" id="reset-otp" placeholder="رمز التحقق (6 أرقام)" maxlength="6" style="text-align: center; font-weight: bold;"/>
+      <input type="password" id="reset-new-pass" placeholder="كلمة المرور الجديدة"/>
+      <button class="btn" onclick="confirmResetPassword()">حفظ كلمة المرور الجديدة</button>
+      <button class="btn btn-secondary" onclick="showView('login')">إلغاء</button>
+    </div>
+
     <div class="error" id="auth-err"></div>
+    <div class="success" id="auth-msg"></div>
   </section>
 
+  <!-- لوحة التحكم بعد الدخول -->
   <section class="card hidden" id="dash">
-    <div style="overflow: hidden; margin-bottom: 12px;">
+    <div style="overflow: hidden; margin-bottom: 10px;">
       <button class="logout-btn" onclick="logout()">خروج</button>
-      <h2 style="margin: 0; font-size: 18px; text-align: right;" id="u-name">أهلاً بك</h2>
+      <h3 style="margin: 0; text-align: right;" id="u-welcome">أهلاً بك</h3>
     </div>
 
-    <div class="stats">
-      <div class="stat">
-        <div class="lbl">المستوى الحالي</div>
-        <div class="val" id="u-level">1</div>
+    <!-- قائمة المستويات الثلاثة -->
+    <div class="boards-list">
+      <div class="board-card">
+        <div class="board-info">
+          <div class="board-name">المستوى 1</div>
+          <div class="board-val">المستوى الأول (يتطلب 4 إحالات)</div>
+        </div>
+        <button class="btn-view active-board" id="btn-lvl-1" onclick="switchBoard(1)">عرض (VIEW)</button>
       </div>
-      <div class="stat">
-        <div class="lbl">المسجلين برابطك</div>
-        <div class="val" id="u-refs">0/3</div>
+
+      <div class="board-card">
+        <div class="board-info">
+          <div class="board-name">المستوى 2</div>
+          <div class="board-val">المستوى الثاني (يتطلب 4 إحالات)</div>
+        </div>
+        <button class="btn-view" id="btn-lvl-2" onclick="switchBoard(2)">عرض (VIEW)</button>
+      </div>
+
+      <div class="board-card">
+        <div class="board-info">
+          <div class="board-name">المستوى 3</div>
+          <div class="board-val">المستوى الثالث (يتطلب 4 إحالات)</div>
+        </div>
+        <button class="btn-view" id="btn-lvl-3" onclick="switchBoard(3)">عرض (VIEW)</button>
       </div>
     </div>
 
-    <div class="board-container">
-      <div class="board-title">لوحة أعضاء فريقك (BOARD)</div>
+    <!-- لوحة العرض التفاعلية -->
+    <div class="board-view-container">
+      <div class="board-header-tag" id="current-board-title">لوحة المستوى 1</div>
       
-      <div class="board-level-legend">
-        <div class="circle-legend">
-          <div id="board-leader-name">أنت</div>
-          <span id="board-leader-lvl">القائد</span>
-        </div>
+      <div class="leader-box">
+        <div id="leader-name">أنت</div>
+        <span id="leader-status">القائد</span>
       </div>
 
-      <div class="board-grid">
-        <div class="slot">
-          <div class="slot-circle" id="slot-1">فارغ</div>
-          <div class="slot-label" id="slot-1-name">إحالة 1</div>
+      <!-- الإحالات الأربعة -->
+      <div class="slots-grid">
+        <div class="slot-item">
+          <div class="slot-ball" id="slot-1">فارغ</div>
+          <div class="slot-name" id="name-1">إحالة 1</div>
         </div>
-        <div class="slot">
-          <div class="slot-circle" id="slot-2">فارغ</div>
-          <div class="slot-label" id="slot-2-name">إحالة 2</div>
+        <div class="slot-item">
+          <div class="slot-ball" id="slot-2">فارغ</div>
+          <div class="slot-name" id="name-2">إحالة 2</div>
         </div>
-        <div class="slot">
-          <div class="slot-circle" id="slot-3">فارغ</div>
-          <div class="slot-label" id="slot-3-name">إحالة 3</div>
+        <div class="slot-item">
+          <div class="slot-ball" id="slot-3">فارغ</div>
+          <div class="slot-name" id="name-3">إحالة 3</div>
+        </div>
+        <div class="slot-item">
+          <div class="slot-ball" id="slot-4">فارغ</div>
+          <div class="slot-name" id="name-4">إحالة 4</div>
         </div>
       </div>
     </div>
 
-    <p style="font-size: 13px; color: #cbd5e1; margin-top: 15px;">رابط الإحالة المباشر الخاص بك:</p>
-    <div class="link-box" id="ref-link">...</div>
-    <button class="btn" style="margin-top: 10px;" onclick="copyLink()">نسخ الرابط ومشاركته</button>
+    <div class="link-container" id="share-link">...</div>
+    <button class="btn" style="margin-top: 10px;" onclick="copyLink()">نسخ رابط الإحالة</button>
   </section>
 
   <script>
     const $ = id => document.getElementById(id);
     const token = () => localStorage.getItem("token");
+    let currentRegEmail = "";
+    let currentForgotEmail = "";
+    let userData = null;
+    let userRefs = [];
+    let viewingBoard = 1;
 
-    function tab(type) {
-      if (type === 'login') {
+    function showView(view) {
+      $('auth-err').innerText = '';
+      $('auth-msg').innerText = '';
+      $('auth-tabs').classList.toggle('hidden', view !== 'login' && view !== 'reg');
+      $('login-form').classList.toggle('hidden', view !== 'login');
+      $('reg-form').classList.toggle('hidden', view !== 'reg');
+      $('verify-form').classList.toggle('hidden', view !== 'verify');
+      $('forgot-form').classList.toggle('hidden', view !== 'forgot');
+      $('reset-form').classList.toggle('hidden', view !== 'reset');
+
+      if (view === 'login') {
         $('tab-login').classList.add('active');
         $('tab-reg').classList.remove('active');
-        $('login-form').classList.remove('hidden');
-        $('reg-form').classList.add('hidden');
-      } else {
+      } else if (view === 'reg') {
         $('tab-reg').classList.add('active');
         $('tab-login').classList.remove('active');
-        $('reg-form').classList.remove('hidden');
-        $('login-form').classList.add('hidden');
       }
-      $('auth-err').innerText = '';
     }
 
     async function req(url, body) {
@@ -164,19 +232,66 @@
     async function register() {
       $('auth-err').innerText = '';
       const params = new URLSearchParams(window.location.search);
-      const ref = params.get('ref');
+      currentRegEmail = $('reg-email').value;
       try {
         const d = await req("/api/register", {
           name: $('reg-name').value,
-          email: $('reg-email').value,
+          email: currentRegEmail,
           password: $('reg-pass').value,
-          referrerCode: ref
+          referrerCode: params.get('ref')
+        });
+        if (d.message) {
+          $('auth-msg').innerText = d.message;
+          showView('verify');
+        } else {
+          $('auth-err').innerText = "تعذر إرسال الرمز";
+        }
+      } catch(e) { $('auth-err').innerText = "حدث خطأ في الاتصال"; }
+    }
+
+    async function verifyOtp() {
+      $('auth-err').innerText = '';
+      try {
+        const d = await req("/api/verify-otp", {
+          email: currentRegEmail,
+          otp: $('verify-otp').value
         });
         if (d.token) {
           localStorage.setItem("token", d.token);
           load();
         } else {
-          $('auth-err').innerText = d.message || "تعذر إنشاء الحساب";
+          $('auth-err').innerText = d.message || "الرمز غير صحيح";
+        }
+      } catch(e) { $('auth-err').innerText = "حدث خطأ في الاتصال"; }
+    }
+
+    async function sendResetOtp() {
+      $('auth-err').innerText = '';
+      currentForgotEmail = $('forgot-email').value;
+      try {
+        const d = await req("/api/forgot-password", { email: currentForgotEmail });
+        if (d.message) {
+          $('auth-msg').innerText = d.message;
+          showView('reset');
+        } else {
+          $('auth-err').innerText = "تعذر إرسال الرمز";
+        }
+      } catch(e) { $('auth-err').innerText = "حدث خطأ في الاتصال"; }
+    }
+
+    async function confirmResetPassword() {
+      $('auth-err').innerText = '';
+      try {
+        const d = await req("/api/reset-password", {
+          email: currentForgotEmail,
+          otp: $('reset-otp').value,
+          newPassword: $('reset-new-pass').value
+        });
+        if (d.message) {
+          showView('login');
+          $('auth-msg').innerText = d.message;
+        } else {
+          $('auth-err').innerText = "فشل تحديث كلمة المرور";
         }
       } catch(e) { $('auth-err').innerText = "حدث خطأ في الاتصال"; }
     }
@@ -188,44 +303,62 @@
           headers: { "Authorization": "Bearer " + token() }
         });
         const d = await res.json();
-        if (d.user) render(d.user, d.referrals || []);
+        if (d.user) {
+          userData = d.user;
+          userRefs = d.referrals || [];
+          viewingBoard = userData.level;
+          renderDashboard();
+        }
       } catch(e) {}
     }
 
-    function render(u, referrals) {
+    function switchBoard(lvl) {
+      viewingBoard = lvl;
+      renderDashboard();
+    }
+
+    function renderDashboard() {
       $('auth').classList.add('hidden');
       $('dash').classList.remove('hidden');
-      $('u-name').innerText = "مرحباً، " + u.name;
-      $('u-level').innerText = u.level;
-      $('board-leader-name').innerText = u.name;
-      $('board-leader-lvl').innerText = "مستوى " + u.level;
+      $('u-welcome').innerText = "مرحباً، " + userData.name + " (مستواك الحالي: المستوى " + userData.level + ")";
 
-      const count = referrals.length || u.referral_count || 0;
-      $('u-refs').innerText = count + "/3";
+      const names = { 1: "المستوى 1", 2: "المستوى 2", 3: "المستوى 3" };
+      $('current-board-title').innerText = "معاينة: لوحة " + names[viewingBoard];
+      $('leader-name').innerText = userData.name;
+      $('leader-status').innerText = (viewingBoard === userData.level) ? "لوحتك الحالية" : (viewingBoard < userData.level ? "مكتملة ✓" : "مغلقة 🔒");
 
       for (let i = 1; i <= 3; i++) {
-        const el = $('slot-' + i);
-        const nameEl = $('slot-' + i + '-name');
-        if (referrals && referrals[i - 1]) {
-          el.className = "slot-circle filled";
-          el.innerText = "✓ نشط";
-          nameEl.innerText = referrals[i - 1].name;
-          nameEl.style.color = "#4ade80";
+        const btn = $('btn-lvl-' + i);
+        if (btn) btn.classList.toggle('active-board', i === viewingBoard);
+      }
+
+      for (let i = 1; i <= 4; i++) {
+        const ball = $('slot-' + i);
+        const nameEl = $('name-' + i);
+
+        if (viewingBoard === userData.level && userRefs[i - 1]) {
+          ball.className = "slot-ball active";
+          ball.innerText = "✓ نشط";
+          nameEl.innerText = userRefs[i - 1].name;
+          nameEl.style.color = "#34d399";
+        } else if (viewingBoard < userData.level) {
+          ball.className = "slot-ball active";
+          ball.innerText = "✓ مكتمل";
+          nameEl.innerText = "عضو مكتمل";
+          nameEl.style.color = "#94a3b8";
         } else {
-          el.className = "slot-circle";
-          el.innerText = "فارغ";
+          ball.className = "slot-ball";
+          ball.innerText = "فارغ";
           nameEl.innerText = "إحالة " + i;
           nameEl.style.color = "#94a3b8";
         }
       }
 
-      const fullUrl = window.location.origin + "/?ref=" + u.referral_code;
-      $('ref-link').innerText = fullUrl;
+      $('share-link').innerText = window.location.origin + "/?ref=" + userData.referral_code;
     }
 
     function copyLink() {
-      const text = $('ref-link').innerText;
-      navigator.clipboard.writeText(text);
+      navigator.clipboard.writeText($('share-link').innerText);
       alert("تم نسخ رابط إحالتك بنجاح!");
     }
 
