@@ -15,7 +15,7 @@ const pool = new Pool({
 
 const JWT_SECRET = process.env.JWT_SECRET || 'my_super_secret_jwt_key_12345';
 
-// مزامنة وتعديل نوع عمود referred_by ليقبل النصوص والأرقام
+// مزامنة قاعدة البيانات وإصلاح نوع خانة الإحالة بشكل جذري
 async function initDB() {
   try {
     await pool.query(`
@@ -33,26 +33,36 @@ async function initDB() {
       );
     `);
 
-    // تحويل عمود referred_by إلى نص لتفادي خطأ integer
-    await pool.query(`
-      ALTER TABLE users ALTER COLUMN referred_by TYPE VARCHAR(50) USING referred_by::varchar;
-    `).catch(() => {});
+    // 1. فك أي ارتباط أو قيد قديم يمنع تعديل العمود
+    await pool.query(`ALTER TABLE users DROP CONSTRAINT IF EXISTS users_referred_by_fkey CASCADE;`).catch(() => {});
 
-    console.log("DB sync & migration complete");
+    // 2. تحويل العمود إلى نص أو إعادة بنائه إذا كان مقفولاً بنوع Integer
+    try {
+      await pool.query(`ALTER TABLE users ALTER COLUMN referred_by TYPE VARCHAR(50) USING referred_by::text;`);
+    } catch (e) {
+      await pool.query(`ALTER TABLE users DROP COLUMN IF EXISTS referred_by CASCADE;`);
+      await pool.query(`ALTER TABLE users ADD COLUMN referred_by VARCHAR(50);`);
+    }
+
+    try {
+      await pool.query(`ALTER TABLE users ALTER COLUMN referral_code TYPE VARCHAR(50) USING referral_code::text;`);
+    } catch (e) {}
+
+    console.log("Database schema fixed successfully!");
   } catch (err) {
     console.error("DB Init Error:", err.message);
   }
 }
 initDB();
 
-// حساب المستوى بناءً على عدد الإحالات (4 لكل مستوى)
+// حساب المستوى (4 إحالات لكل مستوى)
 function calculateLevel(count) {
   if (count >= 8) return 3;
   if (count >= 4) return 2;
   return 1;
 }
 
-// مسار التسجيل
+// مسار إنشاء الحساب
 app.post('/api/register', async (req, res) => {
   try {
     const { name, email, password, referral_code } = req.body;
@@ -69,12 +79,12 @@ app.post('/api/register', async (req, res) => {
     const hashedPassword = await bcrypt.hash(password, 10);
     const myReferral = Math.random().toString(36).substring(2, 8).toUpperCase();
     const otp = Math.floor(100000 + Math.random() * 900000).toString();
-    const refCodeToSave = referral_code && referral_code.trim() ? referral_code.trim().toUpperCase() : null;
+    const refToSave = (referral_code && String(referral_code).trim()) ? String(referral_code).trim().toUpperCase() : null;
 
     await pool.query(
       `INSERT INTO users (name, email, password, password_hash, referral_code, referred_by, is_verified, verification_otp)
        VALUES ($1, $2, $3, $4, $5, $6, $7, $8)`,
-      [name, cleanEmail, hashedPassword, hashedPassword, myReferral, refCodeToSave, true, otp]
+      [name, cleanEmail, hashedPassword, hashedPassword, myReferral, refToSave, true, otp]
     );
 
     res.json({ message: 'تم إنشاء الحساب بنجاح', otp });
@@ -83,7 +93,7 @@ app.post('/api/register', async (req, res) => {
   }
 });
 
-// مسار التحقق من OTP
+// مسار تأكيد OTP
 app.post('/api/verify-otp', async (req, res) => {
   try {
     const { email, otp } = req.body;
