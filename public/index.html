@@ -6,129 +6,319 @@
   <title>نظام لوحات الإحالات والمستويات</title>
   <style>
     :root {
+      --navy-bg: #032b43;
+      --card-bg: #053b5c;
       --primary: #f59e0b;
-      --bg: #0f172a;
-      --card: #1e293b;
-      --text: #f8fafc;
-      --border: #334155;
+      --accent: #00adb5;
       --success: #10b981;
+      --text: #ffffff;
+      --border: #145374;
     }
-    * { box-sizing: border-box; font-family: system-ui, -apple-system, sans-serif; margin: 0; padding: 0; }
+    * { box-sizing: border-box; margin: 0; padding: 0; font-family: system-ui, -apple-system, sans-serif; }
     body {
-      background-color: var(--bg);
+      background-color: var(--navy-bg);
       color: var(--text);
-      padding: 20px 15px;
+      min-height: 100vh;
       display: flex;
       flex-direction: column;
       align-items: center;
-      min-height: 100vh;
+      padding: 15px;
     }
-    h1 { color: var(--primary); font-size: 1.5rem; text-align: center; margin-bottom: 20px; }
+
+    .top-bar {
+      width: 100%;
+      max-width: 480px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 10px 5px;
+      border-bottom: 1px solid rgba(255,255,255,0.1);
+      margin-bottom: 15px;
+    }
+    .logout-btn { color: #f87171; font-size: 0.85rem; font-weight: bold; cursor: pointer; text-decoration: none; }
+
     .card {
-      background: var(--card);
-      border: 1px solid var(--border);
+      background: var(--card-bg);
       border-radius: 16px;
       padding: 24px;
       width: 100%;
       max-width: 480px;
-      box-shadow: 0 8px 24px rgba(0,0,0,0.3);
+      box-shadow: 0 10px 25px rgba(0,0,0,0.4);
     }
     .tabs { display: flex; gap: 8px; margin-bottom: 18px; }
     .tab-btn {
-      flex: 1; padding: 10px; border: none; border-radius: 8px;
-      background: #0f172a; color: var(--text); cursor: pointer; font-weight: bold;
+      flex: 1; padding: 12px; border: none; border-radius: 8px;
+      background: #021e30; color: #fff; cursor: pointer; font-weight: bold;
     }
     .tab-btn.active { background: var(--primary); color: #000; }
     input {
-      width: 100%; padding: 12px; margin-bottom: 10px; border-radius: 8px;
-      border: 1px solid var(--border); background: #0f172a; color: #fff; font-size: 0.95rem;
+      width: 100%; padding: 13px; margin-bottom: 12px; border-radius: 8px;
+      border: 1px solid var(--border); background: #021e30; color: #fff; font-size: 0.95rem; outline: none;
     }
-    button.submit-btn {
-      width: 100%; padding: 12px; background: var(--primary); border: none;
-      border-radius: 8px; color: #000; font-weight: bold; font-size: 1rem; cursor: pointer; margin-top: 6px;
+    button.btn-primary {
+      width: 100%; padding: 13px; background: var(--primary); border: none;
+      border-radius: 8px; color: #000; font-weight: bold; font-size: 1rem; cursor: pointer;
     }
-    .msg { margin-top: 10px; text-align: center; font-size: 0.9rem; }
-    .msg.error { color: #f87171; }
-    .msg.success { color: #4ade80; }
-    .otp-box {
-      background: #0f172a; border: 2px dashed var(--primary); color: var(--primary);
-      font-size: 1.6rem; font-weight: bold; text-align: center; padding: 12px; border-radius: 8px; margin: 10px 0; letter-spacing: 5px;
+    .otp-display {
+      background: #021e30; border: 2px dashed var(--primary); color: var(--primary);
+      font-size: 1.8rem; font-weight: bold; text-align: center; padding: 12px; border-radius: 8px; margin: 12px 0; letter-spacing: 5px;
     }
-    .level-container {
-      background: #0f172a; border-radius: 12px; padding: 15px; margin-bottom: 16px; border: 1px solid var(--border); text-align: center;
+
+    /* أسهم التنقل بين المستويات */
+    .nav-slider {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      width: 100%;
+      max-width: 480px;
+      background: #022033;
+      padding: 10px 16px;
+      border-radius: 12px;
+      margin-bottom: 12px;
+      border: 1px solid var(--border);
     }
-    .level-title { font-size: 1.2rem; font-weight: bold; color: var(--primary); }
-    .progress-bar-bg { background: #334155; border-radius: 20px; height: 12px; margin: 10px 0 6px; overflow: hidden; }
-    .progress-bar-fill { background: linear-gradient(90deg, var(--primary), var(--success)); height: 100%; width: 0%; transition: width 0.4s ease; }
-    .ref-link-card { background: #0f172a; border-radius: 10px; padding: 12px; border: 1px solid var(--border); margin-bottom: 16px; display: flex; flex-direction: column; gap: 8px; }
-    .copy-btn { background: var(--success); color: #fff; border: none; padding: 10px; border-radius: 8px; font-weight: bold; cursor: pointer; }
-    .referral-item { background: #0f172a; border: 1px solid var(--border); padding: 10px 12px; border-radius: 8px; margin-bottom: 8px; display: flex; justify-content: space-between; align-items: center; font-size: 0.9rem; }
+    .nav-btn {
+      background: #0f4c75;
+      color: #fff;
+      border: none;
+      padding: 8px 16px;
+      border-radius: 6px;
+      font-weight: bold;
+      cursor: pointer;
+    }
+    .nav-btn:disabled { opacity: 0.3; cursor: not-allowed; }
+    .dots { display: flex; gap: 6px; }
+    .dot { width: 10px; height: 10px; border-radius: 50%; background: #3282b8; }
+    .dot.active { background: var(--primary); transform: scale(1.2); }
+
+    .level-card {
+      background: #fff;
+      color: #0f172a;
+      border-radius: 16px;
+      padding: 14px;
+      width: 100%;
+      max-width: 480px;
+      text-align: center;
+      margin-bottom: 15px;
+      box-shadow: 0 6px 18px rgba(0,0,0,0.25);
+    }
+    .status-tag {
+      display: inline-block;
+      padding: 4px 10px;
+      border-radius: 12px;
+      font-size: 0.8rem;
+      font-weight: bold;
+      margin-top: 6px;
+    }
+    .status-active { background: #dcfce7; color: #15803d; }
+    .status-locked { background: #fee2e2; color: #b91c1c; }
+
+    /* مصفوفة اللوحة: 2 فوق - أنت في الوسط - 2 تحت */
+    .board-container {
+      background: #ffffff;
+      border-radius: 20px;
+      padding: 24px 15px;
+      width: 100%;
+      max-width: 480px;
+      margin-bottom: 15px;
+      box-shadow: 0 10px 30px rgba(0,0,0,0.35);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 20px;
+    }
+    
+    .board-row {
+      display: flex;
+      justify-content: center;
+      gap: 35px;
+      width: 100%;
+    }
+
+    .circle-slot {
+      width: 80px;
+      height: 80px;
+      border-radius: 50%;
+      background: #f1f5f9;
+      border: 2px dashed #94a3b8;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      font-size: 0.75rem;
+      font-weight: bold;
+      color: #64748b;
+      transition: all 0.3s ease;
+      box-shadow: 0 4px 10px rgba(0,0,0,0.06);
+    }
+    .circle-slot.filled {
+      background: linear-gradient(135deg, #10b981, #059669);
+      border: 2px solid #047857;
+      color: #fff;
+      box-shadow: 0 6px 14px rgba(16, 185, 129, 0.4);
+    }
+
+    /* أنت في الوسط */
+    .circle-center {
+      width: 95px;
+      height: 95px;
+      border-radius: 50%;
+      background: linear-gradient(135deg, #f59e0b, #d97706);
+      border: 3px solid #b45309;
+      color: #fff;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      font-weight: bold;
+      font-size: 0.9rem;
+      box-shadow: 0 6px 20px rgba(245, 158, 11, 0.5);
+    }
+
+    .ref-box {
+      background: #022033;
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 14px;
+      width: 100%;
+      max-width: 480px;
+      margin-bottom: 20px;
+    }
+    .ref-url {
+      background: #011420;
+      padding: 10px;
+      border-radius: 8px;
+      color: #38bdf8;
+      word-break: break-all;
+      font-size: 0.85rem;
+      margin: 8px 0;
+    }
+    .copy-btn {
+      background: var(--success);
+      color: #fff;
+      border: none;
+      width: 100%;
+      padding: 10px;
+      border-radius: 8px;
+      font-weight: bold;
+      cursor: pointer;
+    }
   </style>
 </head>
 <body>
 
-  <h1>نظام لوحات الإحالات والمستويات</h1>
-
-  <div class="card" id="authBox">
+  <!-- واجهة التسجيل -->
+  <div id="authSection" class="card">
     <div class="tabs" id="tabGroup">
-      <button class="tab-btn active" id="tabReg" onclick="switchTab('register')">إنشاء حساب</button>
-      <button class="tab-btn" id="tabLogin" onclick="switchTab('login')">تسجيل الدخول</button>
+      <button class="tab-btn active" id="tabReg" onclick="switchTab('reg')">إنشاء حساب</button>
+      <button class="tab-btn" id="tabLog" onclick="switchTab('log')">تسجيل الدخول</button>
     </div>
 
-    <div id="registerForm">
+    <div id="formReg">
       <input type="text" id="regName" placeholder="الاسم الكامل">
       <input type="email" id="regEmail" placeholder="البريد الإلكتروني">
       <input type="password" id="regPass" placeholder="كلمة المرور">
       <input type="text" id="regRef" placeholder="رمز الإحالة (اختياري)">
-      <button class="submit-btn" onclick="handleRegister()">إنشاء الحساب وإرسال الرمز</button>
+      <button class="btn-primary" onclick="handleRegister()">إنشاء الحساب وإصدار الرمز</button>
     </div>
 
-    <div id="otpForm" style="display: none;">
-      <p style="text-align: center; color: #cbd5e1;">رمز التحقق الخاص بك:</p>
-      <div id="otpDisplay" class="otp-box"></div>
-      <input type="text" id="otpInput" placeholder="أدخل رمز التحقق">
-      <button class="submit-btn" onclick="handleVerify()">تفعيل الحساب والدخول</button>
+    <div id="formOtp" style="display: none;">
+      <p style="text-align: center; color: #cbd5e1;">رمز التفعيل الخاص بك:</p>
+      <div id="otpDisplay" class="otp-display"></div>
+      <input type="text" id="otpInput" placeholder="أدخل رمز التفعيل">
+      <button class="btn-primary" onclick="handleVerify()">تفعيل الحساب والدخول للوحة</button>
     </div>
 
-    <div id="loginForm" style="display: none;">
+    <div id="formLog" style="display: none;">
       <input type="email" id="logEmail" placeholder="البريد الإلكتروني">
       <input type="password" id="logPass" placeholder="كلمة المرور">
-      <button class="submit-btn" onclick="handleLogin()">تسجيل الدخول</button>
+      <button class="btn-primary" onclick="handleLogin()">تسجيل الدخول</button>
     </div>
 
-    <div id="statusMsg" class="msg"></div>
+    <div id="statusMsg" style="text-align: center; margin-top: 10px; font-size: 0.9rem;"></div>
   </div>
 
   <!-- لوحة التحكم -->
-  <div class="card" id="dashBox" style="display: none;">
-    <h2 id="userName" style="color: var(--primary); margin-bottom: 12px;">أهلاً بك</h2>
-
-    <div class="level-container">
-      <div class="level-title" id="userLevelBadge">المستوى 1 / 3</div>
-      <div class="progress-bar-bg">
-        <div class="progress-bar-fill" id="levelProgress"></div>
+  <div id="mainDashboard" style="display: none; width: 100%; max-width: 480px;">
+    
+    <div class="top-bar">
+      <div>
+        <h2 id="welcomeName">مرحباً</h2>
+        <span style="font-size: 0.8rem; color: #38bdf8;" id="refCodeBadge"></span>
       </div>
-      <div style="font-size: 0.85rem; color: #94a3b8;" id="progressText">0 من 4 إحالات للوصول إلى المستوى 2</div>
+      <span class="logout-btn" onclick="logout()">تسجيل الخروج 🚪</span>
     </div>
 
-    <div class="ref-link-card">
-      <span style="font-size: 0.85rem; color: #94a3b8;">رابط الإحالة الخاص بك:</span>
-      <div style="background:#1e293b; padding:8px; border-radius:6px; font-size:0.85rem; word-break:break-all; color:#38bdf8;" id="refLink"></div>
-      <button class="copy-btn" onclick="copyRefLink()">نسخ رابط الإحالة 📋</button>
+    <!-- شريط التنقل بين المستويات الثلاثة -->
+    <div class="nav-slider">
+      <button class="nav-btn" id="prevBtn" onclick="changeLevel(-1)">❮ السابق</button>
+      <div class="dots">
+        <div class="dot active" id="dot1"></div>
+        <div class="dot" id="dot2"></div>
+        <div class="dot" id="dot3"></div>
+      </div>
+      <button class="nav-btn" id="nextBtn" onclick="changeLevel(1)">التالي ❯</button>
     </div>
 
-    <div style="margin-top: 15px;">
-      <h3 style="font-size: 1rem; margin-bottom: 8px; color: var(--primary);">قائمة الإحالات المسجلة (<span id="refCountBadge">0</span>)</h3>
-      <div id="referralsList">
-        <div style="text-align: center; color: #64748b; font-size: 0.9rem; padding: 10px;">لا توجد إحالات مسجلة بعد</div>
+    <div class="level-card">
+      <h3 id="cardLevelName">المستوى 1: الفحم (Coal)</h3>
+      <p id="cardLevelSub" style="color:#64748b; font-size: 0.9rem;">يتطلب 4 إحالات للوصول إلى المستوى 2</p>
+      <span class="status-tag status-active" id="cardStatusBadge">مفتوح حالياً</span>
+    </div>
+
+    <!-- اللوحة: 2 فوق - أنت في الوسط - 2 تحت -->
+    <div class="board-container">
+      
+      <!-- الصف العلوي -->
+      <div class="board-row">
+        <div class="circle-slot" id="slot1">
+          <span style="font-size: 1.2rem;">👤</span>
+          <span id="slot1Name">شاغر 1</span>
+        </div>
+        <div class="circle-slot" id="slot2">
+          <span style="font-size: 1.2rem;">👤</span>
+          <span id="slot2Name">شاغر 2</span>
+        </div>
+      </div>
+
+      <!-- أنت في المنتصف -->
+      <div class="board-row">
+        <div class="circle-center">
+          <span style="font-size: 1.3rem;">👑</span>
+          <span id="centerUserName">أنت</span>
+        </div>
+      </div>
+
+      <!-- الصف السفلي -->
+      <div class="board-row">
+        <div class="circle-slot" id="slot3">
+          <span style="font-size: 1.2rem;">👤</span>
+          <span id="slot3Name">شاغر 3</span>
+        </div>
+        <div class="circle-slot" id="slot4">
+          <span style="font-size: 1.2rem;">👤</span>
+          <span id="slot4Name">شاغر 4</span>
+        </div>
+      </div>
+
+      <div style="font-size: 0.85rem; color: #64748b; margin-top: 5px;" id="matrixCountText">
+        الأعضاء في هذه اللوحة: 0 من 4
       </div>
     </div>
 
-    <button class="submit-btn" style="background: #ef4444; color: #fff; margin-top: 15px;" onclick="logout()">تسجيل الخروج</button>
+    <!-- رابط الإحالة -->
+    <div class="ref-box">
+      <div style="font-size: 0.85rem; color: #94a3b8;">رابط الإحالة المباشر الخاص بك:</div>
+      <div class="ref-url" id="refLinkText"></div>
+      <button class="copy-btn" onclick="copyRef()">نسخ رابط الإحالة 📋</button>
+    </div>
+
   </div>
 
   <script>
-    let savedEmail = "";
+    let activeLevelView = 1;
+    let userData = null;
+    let allReferrals = [];
 
     window.addEventListener('load', () => {
       const urlParams = new URLSearchParams(window.location.search);
@@ -137,24 +327,24 @@
         document.getElementById('regRef').value = ref;
       }
       if (localStorage.getItem("token")) {
-        loadDashboard();
+        loadData();
       }
     });
 
-    function switchTab(type) {
+    function switchTab(t) {
       document.getElementById('statusMsg').innerText = '';
-      if (type === 'register') {
+      if (t === 'reg') {
         document.getElementById('tabReg').classList.add('active');
-        document.getElementById('tabLogin').classList.remove('active');
-        document.getElementById('registerForm').style.display = 'block';
-        document.getElementById('loginForm').style.display = 'none';
-        document.getElementById('otpForm').style.display = 'none';
+        document.getElementById('tabLog').classList.remove('active');
+        document.getElementById('formReg').style.display = 'block';
+        document.getElementById('formLog').style.display = 'none';
+        document.getElementById('formOtp').style.display = 'none';
       } else {
-        document.getElementById('tabLogin').classList.add('active');
+        document.getElementById('tabLog').classList.add('active');
         document.getElementById('tabReg').classList.remove('active');
-        document.getElementById('registerForm').style.display = 'none';
-        document.getElementById('loginForm').style.display = 'block';
-        document.getElementById('otpForm').style.display = 'none';
+        document.getElementById('formReg').style.display = 'none';
+        document.getElementById('formLog').style.display = 'block';
+        document.getElementById('formOtp').style.display = 'none';
       }
     }
 
@@ -166,14 +356,13 @@
       const msg = document.getElementById('statusMsg');
 
       if (!name || !email || !password) {
-        msg.className = "msg error";
-        msg.innerText = "يرجى ملء جميع الحقول";
+        msg.innerText = "يرجى إدخال جميع الحقول";
+        msg.style.color = "#f87171";
         return;
       }
 
-      savedEmail = email;
-      msg.className = "msg";
       msg.innerText = "جاري إنشاء الحساب...";
+      msg.style.color = "#fff";
 
       try {
         const res = await fetch("/api/register", {
@@ -182,32 +371,28 @@
           body: JSON.stringify({ name, email, password, referral_code: ref })
         });
         const data = await res.json();
-
         if (res.ok) {
           document.getElementById('tabGroup').style.display = 'none';
-          document.getElementById('registerForm').style.display = 'none';
-          document.getElementById('otpForm').style.display = 'block';
+          document.getElementById('formReg').style.display = 'none';
+          document.getElementById('formOtp').style.display = 'block';
           document.getElementById('otpDisplay').innerText = data.otp;
           document.getElementById('otpInput').value = data.otp;
-          msg.className = "msg success";
-          msg.innerText = "تم إصدار الرمز بنجاح! اضغط تفعيل الحساب.";
+          msg.innerText = "تم إنشاء الحساب!";
+          msg.style.color = "#4ade80";
         } else {
-          msg.className = "msg error";
-          msg.innerText = data.error || "تعذر التسجيل";
+          msg.innerText = data.error || "خطأ أثناء التسجيل";
+          msg.style.color = "#f87171";
         }
-      } catch (err) {
-        msg.className = "msg error";
-        msg.innerText = "خطأ في الاتصال بالخادم";
+      } catch (e) {
+        msg.innerText = "تعذر الاتصال بالخادم";
+        msg.style.color = "#f87171";
       }
     }
 
     async function handleVerify() {
+      const email = document.getElementById('regEmail').value.trim();
       const otp = document.getElementById('otpInput').value.trim();
-      const email = savedEmail || document.getElementById('regEmail').value.trim();
       const msg = document.getElementById('statusMsg');
-
-      msg.className = "msg";
-      msg.innerText = "جاري التفعيل...";
 
       try {
         const res = await fetch("/api/verify-otp", {
@@ -218,13 +403,12 @@
         const data = await res.json();
         if (res.ok) {
           localStorage.setItem("token", data.token);
-          loadDashboard();
+          loadData();
         } else {
-          msg.className = "msg error";
-          msg.innerText = data.error || "رمز غير صالح";
+          msg.innerText = data.error;
+          msg.style.color = "#f87171";
         }
-      } catch (err) {
-        msg.className = "msg error";
+      } catch (e) {
         msg.innerText = "فشل الاتصال";
       }
     }
@@ -233,6 +417,7 @@
       const email = document.getElementById('logEmail').value.trim();
       const password = document.getElementById('logPass').value;
       const msg = document.getElementById('statusMsg');
+
       try {
         const res = await fetch("/api/login", {
           method: "POST",
@@ -242,18 +427,17 @@
         const data = await res.json();
         if (res.ok) {
           localStorage.setItem("token", data.token);
-          loadDashboard();
+          loadData();
         } else {
-          msg.className = "msg error";
-          msg.innerText = data.error || "بيانات خاطئة";
+          msg.innerText = data.error;
+          msg.style.color = "#f87171";
         }
-      } catch (err) {
-        msg.className = "msg error";
+      } catch (e) {
         msg.innerText = "فشل الاتصال";
       }
     }
 
-    async function loadDashboard() {
+    async function loadData() {
       const token = localStorage.getItem("token");
       if (!token) return;
 
@@ -264,57 +448,86 @@
         const data = await res.json();
 
         if (res.ok && data.user) {
-          document.getElementById('authBox').style.display = 'none';
-          document.getElementById('dashBox').style.display = 'block';
+          userData = data.user;
+          allReferrals = data.referrals || [];
 
-          document.getElementById('userName').innerText = "مرحباً، " + data.user.name;
-          document.getElementById('refLink').innerText = window.location.origin + "/?ref=" + data.user.referral_code;
-          document.getElementById('refCountBadge').innerText = data.referralCount;
+          document.getElementById('authSection').style.display = 'none';
+          document.getElementById('mainDashboard').style.display = 'block';
 
-          const count = data.referralCount;
-          const level = data.user.level;
-          document.getElementById('userLevelBadge').innerText = `المستوى ${level} / 3`;
+          document.getElementById('welcomeName').innerText = "مرحباً، " + userData.name;
+          document.getElementById('refCodeBadge').innerText = "كودك: " + userData.referral_code;
+          document.getElementById('centerUserName').innerText = userData.name.split(' ')[0];
+          document.getElementById('refLinkText').innerText = window.location.origin + "/?ref=" + userData.referral_code;
 
-          let progressPercent = 0;
-          let progressInfo = "";
-          if (level === 1) {
-            progressPercent = (count / 4) * 100;
-            progressInfo = `${count} من 4 إحالات للوصول إلى المستوى 2`;
-          } else if (level === 2) {
-            progressPercent = ((count - 4) / 4) * 100;
-            progressInfo = `${count - 4} من 4 إحالات للوصول إلى المستوى 3`;
-          } else {
-            progressPercent = 100;
-            progressInfo = "🎉 مبروك! وصلت إلى المستوى 3 (المستوى الأقصى)";
-          }
-
-          document.getElementById('levelProgress').style.width = Math.min(progressPercent, 100) + "%";
-          document.getElementById('progressText').innerText = progressInfo;
-
-          const listDiv = document.getElementById('referralsList');
-          if (data.referrals && data.referrals.length > 0) {
-            listDiv.innerHTML = data.referrals.map((r, i) => `
-              <div class="referral-item">
-                <span><strong>${i + 1}.</strong> ${r.name}</span>
-                <span style="color:#10b981; font-size:0.85rem;">مسجل</span>
-              </div>
-            `).join('');
-          } else {
-            listDiv.innerHTML = '<div style="text-align:center; color:#64748b; font-size:0.9rem; padding:10px;">لا توجد إحالات مسجلة بعد</div>';
-          }
-        } else {
-          document.getElementById('statusMsg').className = "msg error";
-          document.getElementById('statusMsg').innerText = data.error || "تعذر فتح اللوحة";
+          activeLevelView = userData.level || 1;
+          renderCurrentLevelView();
         }
-      } catch (err) {
-        document.getElementById('statusMsg').className = "msg error";
-        document.getElementById('statusMsg').innerText = "تعذر تحميل البيانات";
+      } catch (e) {
+        console.error(e);
       }
     }
 
-    function copyRefLink() {
-      const link = document.getElementById('refLink').innerText;
-      navigator.clipboard.writeText(link).then(() => alert("تم نسخ رابط الإحالة بنجاح!"));
+    function changeLevel(step) {
+      activeLevelView += step;
+      if (activeLevelView < 1) activeLevelView = 1;
+      if (activeLevelView > 3) activeLevelView = 3;
+      renderCurrentLevelView();
+    }
+
+    function renderCurrentLevelView() {
+      document.getElementById('dot1').className = activeLevelView === 1 ? 'dot active' : 'dot';
+      document.getElementById('dot2').className = activeLevelView === 2 ? 'dot active' : 'dot';
+      document.getElementById('dot3').className = activeLevelView === 3 ? 'dot active' : 'dot';
+
+      document.getElementById('prevBtn').disabled = activeLevelView === 1;
+      document.getElementById('nextBtn').disabled = activeLevelView === 3;
+
+      const userCurrentLevel = userData ? userData.level : 1;
+      const statusBadge = document.getElementById('cardStatusBadge');
+
+      if (activeLevelView === 1) {
+        document.getElementById('cardLevelName').innerText = "المستوى 1: الفحم (Coal)";
+        document.getElementById('cardLevelSub').innerText = "يتطلب 4 إحالات للوصول إلى المستوى 2";
+      } else if (activeLevelView === 2) {
+        document.getElementById('cardLevelName').innerText = "المستوى 2: البرونزي (Bronze)";
+        document.getElementById('cardLevelSub').innerText = "يتطلب 8 إحالات إجمالية للوصول إلى المستوى 3";
+      } else {
+        document.getElementById('cardLevelName').innerText = "المستوى 3: الذهبي (Gold)";
+        document.getElementById('cardLevelSub').innerText = "أعلى مستوى في النظام!";
+      }
+
+      if (userCurrentLevel >= activeLevelView) {
+        statusBadge.className = "status-tag status-active";
+        statusBadge.innerText = "✓ مفتوح ومتاح لك";
+      } else {
+        statusBadge.className = "status-tag status-locked";
+        statusBadge.innerText = "🔒 مقفل - بحاجة لمزيد من الإحالات";
+      }
+
+      // تحديد وتوزيع الإحالات للوحة الحالية
+      let startIndex = (activeLevelView - 1) * 4;
+      let levelRefs = allReferrals.slice(startIndex, startIndex + 4);
+
+      for (let i = 1; i <= 4; i++) {
+        let slot = document.getElementById(`slot${i}`);
+        let slotText = document.getElementById(`slot${i}Name`);
+        let refUser = levelRefs[i - 1];
+
+        if (refUser) {
+          slot.className = `circle-slot filled`;
+          slotText.innerText = refUser.name.split(' ')[0];
+        } else {
+          slot.className = `circle-slot`;
+          slotText.innerText = `شاغر ${i}`;
+        }
+      }
+
+      document.getElementById('matrixCountText').innerText = `الأعضاء في هذه اللوحة: ${levelRefs.length} من 4`;
+    }
+
+    function copyRef() {
+      const link = document.getElementById('refLinkText').innerText;
+      navigator.clipboard.writeText(link).then(() => alert("تم نسخ رابط إحالتك بنجاح!"));
     }
 
     function logout() {
