@@ -15,6 +15,7 @@ const pool = new Pool({
 
 const JWT_SECRET = process.env.JWT_SECRET || 'my_super_secret_jwt_key_12345';
 
+// ترقية الجدول وإضافة كافة الأعمدة لتفادي أي نقص
 async function initDB() {
   try {
     const alterQueries = [
@@ -27,7 +28,8 @@ async function initDB() {
       "ALTER TABLE users ADD COLUMN IF NOT EXISTS referred_by VARCHAR(50);",
       "ALTER TABLE users ADD COLUMN IF NOT EXISTS level INTEGER DEFAULT 1;",
       "ALTER TABLE users ADD COLUMN IF NOT EXISTS is_verified BOOLEAN DEFAULT TRUE;",
-      "ALTER TABLE users ADD COLUMN IF NOT EXISTS verification_otp VARCHAR(10);"
+      "ALTER TABLE users ADD COLUMN IF NOT EXISTS verification_otp VARCHAR(10);",
+      "ALTER TABLE users ADD COLUMN IF NOT EXISTS created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP;"
     ];
     for (const q of alterQueries) {
       await pool.query(q).catch(() => {});
@@ -39,14 +41,13 @@ async function initDB() {
 }
 initDB();
 
-// دالة حساب المستوى بناءً على عدد الإحالات (كل 4 إحالات بمستوى حتى المستوى 3)
 function calculateLevel(count) {
   if (count >= 8) return 3;
   if (count >= 4) return 2;
   return 1;
 }
 
-// مسار التسجيل
+// إنشاء الحساب
 app.post('/api/register', async (req, res) => {
   try {
     const { name, email, password, referral_code } = req.body;
@@ -72,11 +73,11 @@ app.post('/api/register', async (req, res) => {
 
     res.json({ message: 'تم إنشاء الحساب بنجاح', otp });
   } catch (err) {
-    res.status(500).json({ error: 'خطأ في حفظ البيانات: ' + err.message });
+    res.status(500).json({ error: 'خطأ أثناء التسجيل: ' + err.message });
   }
 });
 
-// مسار تفعيل OTP
+// تفعيل الحساب والـ OTP
 app.post('/api/verify-otp', async (req, res) => {
   try {
     const { email, otp } = req.body;
@@ -86,13 +87,13 @@ app.post('/api/verify-otp', async (req, res) => {
 
     const user = result.rows[0];
     const token = jwt.sign({ id: user.id, email: user.email }, JWT_SECRET, { expiresIn: '7d' });
-    res.json({ message: 'تم الدخول بنجاح', token });
+    res.json({ message: 'تم التفعيل بنجاح', token, user });
   } catch (err) {
-    res.status(500).json({ error: 'خطأ في التفعيل' });
+    res.status(500).json({ error: 'خطأ في تفعيل الرمز' });
   }
 });
 
-// مسار تسجيل الدخول
+// تسجيل الدخول
 app.post('/api/login', async (req, res) => {
   try {
     const { email, password } = req.body;
@@ -105,13 +106,13 @@ app.post('/api/login', async (req, res) => {
     if (!isMatch) return res.status(400).json({ error: 'البريد أو كلمة المرور غير صحيحة' });
 
     const token = jwt.sign({ id: user.id, email: user.email }, JWT_SECRET, { expiresIn: '7d' });
-    res.json({ token });
+    res.json({ token, user });
   } catch (err) {
     res.status(500).json({ error: 'خطأ في تسجيل الدخول' });
   }
 });
 
-// مسار لوحة التحكم مع قائمة الإحالات والمستويات
+// بيانات لوحة التحكم
 app.get('/api/dashboard', async (req, res) => {
   try {
     const authHeader = req.headers['authorization'];
@@ -125,17 +126,16 @@ app.get('/api/dashboard', async (req, res) => {
 
     const user = userRes.rows[0];
 
-    // جلب قائمة الأشخاص الذين سجلوا برمز هذا المستخدم
+    // جلب الإحالات بدون اشتراط created_at لتفادي أي خطأ
     const referralsRes = await pool.query(
-      'SELECT name, email, created_at FROM users WHERE referred_by = $1 ORDER BY created_at DESC',
+      'SELECT name, email FROM users WHERE referred_by = $1',
       [user.referral_code]
     );
 
     const referralCount = referralsRes.rows.length;
     const currentLevel = calculateLevel(referralCount);
 
-    // تحديث المستوى في قاعدة البيانات تلقائياً
-    await pool.query('UPDATE users SET level = $1 WHERE id = $2', [currentLevel, user.id]);
+    await pool.query('UPDATE users SET level = $1 WHERE id = $2', [currentLevel, user.id]).catch(() => {});
 
     res.json({
       user: {
@@ -149,7 +149,8 @@ app.get('/api/dashboard', async (req, res) => {
       referrals: referralsRes.rows
     });
   } catch (err) {
-    res.status(401).json({ error: 'جلسة غير صالحة' });
+    console.error("Dashboard Fetch Error:", err);
+    res.status(500).json({ error: 'تعذر جلب بيانات اللوحة' });
   }
 });
 
