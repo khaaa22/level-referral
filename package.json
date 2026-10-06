@@ -1,12 +1,16 @@
 {
-  "name":"level-referral-site",
-  "version":"1.0.0",
-  "private":true,
-  "scripts":{"start":"node server.js"},
-  "dependencies":{
-    "express":"^4.21.2",
-    "pg":"^8.13.1",
-    "bcryptjs":"^2.4.3",
-    "jsonwebtoken":"^9.0.2"
+  "name": "level-referral",
+  "version": "1.0.0",
+  "description": "Multi-level referral system with boards and email verification",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "dependencies": {
+    "express": "^4.19.2",
+    "pg": "^8.11.5",
+    "bcryptjs": "^2.4.3",
+    "jsonwebtoken": "^9.0.2",
+    "nodemailer": "^6.9.13"
   }
 }
