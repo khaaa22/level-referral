@@ -15,7 +15,7 @@ const pool = new Pool({
 
 const JWT_SECRET = process.env.JWT_SECRET || 'my_super_secret_jwt_key_12345';
 
-// مزامنة مبسطة
+// مزامنة وتعديل نوع عمود referred_by ليقبل النصوص والأرقام
 async function initDB() {
   try {
     await pool.query(`
@@ -32,20 +32,27 @@ async function initDB() {
         verification_otp VARCHAR(10)
       );
     `);
-    console.log("DB sync complete");
+
+    // تحويل عمود referred_by إلى نص لتفادي خطأ integer
+    await pool.query(`
+      ALTER TABLE users ALTER COLUMN referred_by TYPE VARCHAR(50) USING referred_by::varchar;
+    `).catch(() => {});
+
+    console.log("DB sync & migration complete");
   } catch (err) {
     console.error("DB Init Error:", err.message);
   }
 }
 initDB();
 
+// حساب المستوى بناءً على عدد الإحالات (4 لكل مستوى)
 function calculateLevel(count) {
   if (count >= 8) return 3;
   if (count >= 4) return 2;
   return 1;
 }
 
-// إنشاء الحساب
+// مسار التسجيل
 app.post('/api/register', async (req, res) => {
   try {
     const { name, email, password, referral_code } = req.body;
@@ -62,11 +69,12 @@ app.post('/api/register', async (req, res) => {
     const hashedPassword = await bcrypt.hash(password, 10);
     const myReferral = Math.random().toString(36).substring(2, 8).toUpperCase();
     const otp = Math.floor(100000 + Math.random() * 900000).toString();
+    const refCodeToSave = referral_code && referral_code.trim() ? referral_code.trim().toUpperCase() : null;
 
     await pool.query(
       `INSERT INTO users (name, email, password, password_hash, referral_code, referred_by, is_verified, verification_otp)
        VALUES ($1, $2, $3, $4, $5, $6, $7, $8)`,
-      [name, cleanEmail, hashedPassword, hashedPassword, myReferral, referral_code ? referral_code.trim().toUpperCase() : null, true, otp]
+      [name, cleanEmail, hashedPassword, hashedPassword, myReferral, refCodeToSave, true, otp]
     );
 
     res.json({ message: 'تم إنشاء الحساب بنجاح', otp });
@@ -75,7 +83,7 @@ app.post('/api/register', async (req, res) => {
   }
 });
 
-// تفعيل الحساب OTP
+// مسار التحقق من OTP
 app.post('/api/verify-otp', async (req, res) => {
   try {
     const { email, otp } = req.body;
@@ -91,7 +99,7 @@ app.post('/api/verify-otp', async (req, res) => {
   }
 });
 
-// تسجيل الدخول
+// مسار تسجيل الدخول
 app.post('/api/login', async (req, res) => {
   try {
     const { email, password } = req.body;
@@ -110,7 +118,7 @@ app.post('/api/login', async (req, res) => {
   }
 });
 
-// لوحة التحكم المضمونة
+// مسار لوحة التحكم
 app.get('/api/dashboard', async (req, res) => {
   try {
     const authHeader = req.headers['authorization'];
@@ -124,7 +132,6 @@ app.get('/api/dashboard', async (req, res) => {
 
     const user = userRes.rows[0];
 
-    // جلب الإحالات بأمان
     let referrals = [];
     try {
       if (user.referral_code) {
@@ -132,11 +139,13 @@ app.get('/api/dashboard', async (req, res) => {
         referrals = refRes.rows || [];
       }
     } catch (e) {
-      console.log("Referrals query notice:", e.message);
+      console.log("Notice:", e.message);
     }
 
     const referralCount = referrals.length;
     const currentLevel = calculateLevel(referralCount);
+
+    await pool.query('UPDATE users SET level = $1 WHERE id = $2', [currentLevel, user.id]).catch(() => {});
 
     res.json({
       user: {
@@ -150,8 +159,7 @@ app.get('/api/dashboard', async (req, res) => {
       referrals
     });
   } catch (err) {
-    console.error("Dashboard Error:", err.message);
-    res.status(401).json({ error: 'جلسة منتهية أو غير صالحة' });
+    res.status(401).json({ error: 'جلسة غير صالحة' });
   }
 });
 
